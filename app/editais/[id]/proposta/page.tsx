@@ -7,7 +7,6 @@ import remarkGfm from "remark-gfm";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 import { baixarDocx } from "@/lib/exportDocx";
-export const dynamic = "force-dynamic";
 
 type Item = {
   descricao: string;
@@ -205,7 +204,7 @@ ${p?.razao_social ?? ""}`;
                   disabled={saving || !content}
                   className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2 text-sm disabled:opacity-50"
                 >
-                  {saving ? "Salvando..." : "Salvar"}
+                  {saving ? "Salvando..." : "Salvando"}
                 </button>
                 <button
                   onClick={() => window.print()}

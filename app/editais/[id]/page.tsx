@@ -5,7 +5,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 import GoNoGo from "@/components/GoNoGo";
-export const dynamic = "force-dynamic";
 
 type Extracted = {
   objeto: string;
@@ -208,7 +207,7 @@ export default function EditalDetalhe({
                   {d.datas?.abertura_propostas ?? "—"}
                 </p>
                 <p>
-                  <strong>Impugnação:</strong> {d.datas?.impugnacao ?? "—"}
+                  <strong>Impugnacao:</strong> {d.datas?.impugnacao ?? "—"}
                 </p>
                 <p>
                   <strong>Sessão:</strong> {d.datas?.sessao ?? "—"}
