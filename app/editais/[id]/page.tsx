@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 import GoNoGo from "@/components/GoNoGo";
+export const dynamic = "force-dynamic";
 
 type Extracted = {
   objeto: string;

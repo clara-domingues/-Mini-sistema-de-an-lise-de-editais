@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 import { baixarDocx } from "@/lib/exportDocx";
+export const dynamic = "force-dynamic";
 
 type Item = {
   descricao: string;
