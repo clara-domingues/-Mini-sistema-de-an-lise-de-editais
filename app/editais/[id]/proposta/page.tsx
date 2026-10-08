@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 import { baixarDocx } from "@/lib/exportDocx";
+export const dynamic = "force-dynamic";
 
 type Item = {
   descricao: string;
@@ -92,34 +93,34 @@ export default function PropostaPage({ params }: { params: Promise<{ id: string 
 
     const md = `# PROPOSTA COMERCIAL
 
-**Ao:** ${d.orgao ?? "Órgão Licitante"}  
-**Ref.:** ${d.modalidade ?? "Processo Licitatório"}
+**Ao:** ${d.orgao ?? "Ã“rgÃ£o Licitante"}  
+**Ref.:** ${d.modalidade ?? "Processo LicitatÃ³rio"}
 
-## 1. Identificação do proponente
-**Razão Social:** ${p?.razao_social ?? "Não informado"}  
-**CNPJ:** ${p?.cnpj ?? "Não informado"}  
-**Representante legal:** ${p?.responsavel_nome ?? "Não informado"}, ${p?.responsavel_cargo ?? "Representante Legal"}, CPF ${p?.responsavel_cpf ?? "Não informado"}
+## 1. IdentificaÃ§Ã£o do proponente
+**RazÃ£o Social:** ${p?.razao_social ?? "NÃ£o informado"}  
+**CNPJ:** ${p?.cnpj ?? "NÃ£o informado"}  
+**Representante legal:** ${p?.responsavel_nome ?? "NÃ£o informado"}, ${p?.responsavel_cargo ?? "Representante Legal"}, CPF ${p?.responsavel_cpf ?? "NÃ£o informado"}
 
 ## 2. Objeto
 ${d.objeto ?? "Objeto conforme edital."}
 
-## 3. Preços
-| Item | Descrição | Un. | Qtd. | Valor unitário | Valor total |
+## 3. PreÃ§os
+| Item | DescriÃ§Ã£o | Un. | Qtd. | Valor unitÃ¡rio | Valor total |
 |---|---|---|---|---|---|
 ${linhas.join("\n")}
 
 **Valor global da proposta: ${brl(total)}**
 
-## 4. Condições gerais
-- Validade da proposta: 60 (sessenta) dias contados da data de abertura da sessão.
-- Prazo de vigência: ${d.datas?.vigencia ?? "conforme edital"}.
-- Declaramos que os preços acima incluem todos os custos, tributos, fretes e demais despesas necessárias ao cumprimento do objeto.
-- Declaramos que conhecemos e concordamos com todas as condições do edital.
+## 4. CondiÃ§Ãµes gerais
+- Validade da proposta: 60 (sessenta) dias contados da data de abertura da sessÃ£o.
+- Prazo de vigÃªncia: ${d.datas?.vigencia ?? "conforme edital"}.
+- Declaramos que os preÃ§os acima incluem todos os custos, tributos, fretes e demais despesas necessÃ¡rias ao cumprimento do objeto.
+- Declaramos que conhecemos e concordamos com todas as condiÃ§Ãµes do edital.
 
-## 5. Dados bancários
-**Banco:** ${p?.banco ?? "Não informado"}  
-**Agência:** ${p?.agencia ?? "Não informado"}  
-**Conta:** ${p?.conta ?? "Não informado"}
+## 5. Dados bancÃ¡rios
+**Banco:** ${p?.banco ?? "NÃ£o informado"}  
+**AgÃªncia:** ${p?.agencia ?? "NÃ£o informado"}  
+**Conta:** ${p?.conta ?? "NÃ£o informado"}
 
 Data: ${hoje}
 
@@ -147,29 +148,29 @@ ${p?.razao_social ?? ""}`;
       <div className="print:hidden"><Nav /></div>
       <main className="max-w-3xl mx-auto p-4 space-y-4">
         <Link href={`/editais/${id}`} className="text-sm text-blue-600 print:hidden">
-          ← Voltar ao edital
+          â† Voltar ao edital
         </Link>
         <h1 className="text-2xl font-bold text-slate-900 print:hidden">Proposta comercial</h1>
         {!loaded && <p className="text-slate-500">Carregando...</p>}
-        {loaded && !d && <p className="text-red-600">Edital não analisado ou não encontrado.</p>}
+        {loaded && !d && <p className="text-red-600">Edital nÃ£o analisado ou nÃ£o encontrado.</p>}
         {loaded && d && (
           <>
             {!profile?.razao_social && (
               <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-sm print:hidden">
-                O perfil da empresa está vazio.{" "}
+                O perfil da empresa estÃ¡ vazio.{" "}
                 <Link href="/perfil" className="underline font-semibold">Preencha o perfil</Link> antes de gerar a proposta.
               </div>
             )}
             <section className="bg-white rounded-xl shadow p-5 space-y-3 print:hidden">
-              <h2 className="font-semibold text-slate-800">1. Informe os seus preços</h2>
-              {itens.length === 0 && <p className="text-sm text-slate-500">Nenhum item extraído.</p>}
+              <h2 className="font-semibold text-slate-800">1. Informe os seus preÃ§os</h2>
+              {itens.length === 0 && <p className="text-sm text-slate-500">Nenhum item extraÃ­do.</p>}
               {itens.map((it, k) => (
                 <div key={k} className="grid grid-cols-[1fr_auto] gap-3 items-center text-sm border-b pb-2 last:border-0">
                   <div>
                     <p className="text-slate-900 font-medium">{it.descricao}</p>
                     <p className="text-xs text-slate-500">
                       {it.quantidade ?? 1} {it.unidade ?? "un"}
-                      {it.valor_unitario_estimado != null && ` · estimado ${brl(it.valor_unitario_estimado)}`}
+                      {it.valor_unitario_estimado != null && ` Â· estimado ${brl(it.valor_unitario_estimado)}`}
                     </p>
                   </div>
                   <input
@@ -195,7 +196,7 @@ ${p?.razao_social ?? ""}`;
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 rows={14}
-                placeholder="Clique em “Gerar texto da proposta” para começar."
+                placeholder="Clique em â€œGerar texto da propostaâ€ para comeÃ§ar."
                 className="w-full border rounded-lg p-3 font-mono text-xs"
               />
               <div className="flex flex-wrap gap-2">

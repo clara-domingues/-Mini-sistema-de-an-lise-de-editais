@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 import GoNoGo from "@/components/GoNoGo";
 
+export const dynamic = "force-dynamic";
 type Extracted = {
   objeto: string;
   orgao: string;
@@ -45,7 +46,7 @@ type Bid = {
 
 const brl = (v: number | null) =>
   v == null
-    ? "—"
+    ? "â€”"
     : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function EditalDetalhe({
@@ -125,7 +126,7 @@ export default function EditalDetalhe({
       <>
         <Nav />
         <main className="max-w-3xl mx-auto p-4">
-          <p className="text-red-600">Edital não encontrado.</p>
+          <p className="text-red-600">Edital nÃ£o encontrado.</p>
         </main>
       </>
     );
@@ -149,10 +150,10 @@ export default function EditalDetalhe({
       <Nav />
       <main className="max-w-3xl mx-auto p-4 space-y-4">
         <Link href="/editais" className="text-sm text-blue-600">
-          ← Voltar
+          â† Voltar
         </Link>
         <h1 className="text-2xl font-bold text-slate-900">
-          {bid.title ?? "Sem título"}
+          {bid.title ?? "Sem tÃ­tulo"}
         </h1>
 
         {bid.status === "processing" && (
@@ -163,7 +164,7 @@ export default function EditalDetalhe({
 
         {bid.status === "error" && (
           <div className="bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 text-sm space-y-2">
-            <p className="font-semibold">Falha na análise.</p>
+            <p className="font-semibold">Falha na anÃ¡lise.</p>
             <p className="text-xs font-mono">{bid.error_message}</p>
             <button
               onClick={reanalisar}
@@ -185,7 +186,7 @@ export default function EditalDetalhe({
                 <strong className="text-slate-900">Objeto:</strong> {d.objeto}
               </p>
               <p className="text-sm text-slate-700">
-                <strong className="text-slate-900">Órgão:</strong> {d.orgao}
+                <strong className="text-slate-900">Ã“rgÃ£o:</strong> {d.orgao}
               </p>
               <p className="text-sm text-slate-700">
                 <strong className="text-slate-900">Modalidade:</strong>{" "}
@@ -204,23 +205,23 @@ export default function EditalDetalhe({
               <div className="grid grid-cols-2 gap-2 text-sm text-slate-700">
                 <p>
                   <strong>Abertura das propostas:</strong>{" "}
-                  {d.datas?.abertura_propostas ?? "—"}
+                  {d.datas?.abertura_propostas ?? "â€”"}
                 </p>
                 <p>
-                  <strong>Impugnacao:</strong> {d.datas?.impugnacao ?? "—"}
+                  <strong>Impugnacao:</strong> {d.datas?.impugnacao ?? "â€”"}
                 </p>
                 <p>
-                  <strong>Sessão:</strong> {d.datas?.sessao ?? "—"}
+                  <strong>SessÃ£o:</strong> {d.datas?.sessao ?? "â€”"}
                 </p>
                 <p>
-                  <strong>Vigência:</strong> {d.datas?.vigencia ?? "—"}
+                  <strong>VigÃªncia:</strong> {d.datas?.vigencia ?? "â€”"}
                 </p>
               </div>
             </section>
 
             <section className="bg-white rounded-xl shadow p-5 space-y-3">
               <h2 className="font-semibold text-slate-800 border-b pb-2">
-                Habilitação
+                HabilitaÃ§Ã£o
               </h2>
               {(
                 [
@@ -241,7 +242,7 @@ export default function EditalDetalhe({
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-sm text-slate-400">Não informado</p>
+                    <p className="text-sm text-slate-400">NÃ£o informado</p>
                   )}
                 </div>
               ))}
@@ -249,7 +250,7 @@ export default function EditalDetalhe({
 
             <section className="bg-white rounded-xl shadow p-5 space-y-2">
               <h2 className="font-semibold text-slate-800 border-b pb-2">
-                Sanções
+                SanÃ§Ãµes
               </h2>
               {d.sancoes?.length ? (
                 <ul className="list-disc list-inside text-sm text-slate-700">
@@ -258,13 +259,13 @@ export default function EditalDetalhe({
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-400">Não informado</p>
+                <p className="text-sm text-slate-400">NÃ£o informado</p>
               )}
             </section>
 
             <section className="bg-white rounded-xl shadow p-5 space-y-2">
               <h2 className="font-semibold text-slate-800 border-b pb-2">
-                Pontos de atenção (riscos)
+                Pontos de atenÃ§Ã£o (riscos)
               </h2>
               {d.riscos?.length ? (
                 <ul className="list-disc list-inside text-sm text-slate-700">
@@ -273,7 +274,7 @@ export default function EditalDetalhe({
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-slate-400">Não informado</p>
+                <p className="text-sm text-slate-400">NÃ£o informado</p>
               )}
             </section>
 
@@ -284,7 +285,7 @@ export default function EditalDetalhe({
               {d.itens?.length ? (
                 <div className="divide-y text-sm">
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 font-semibold text-slate-600 pb-2">
-                    <span>Descrição</span>
+                    <span>DescriÃ§Ã£o</span>
                     <span>Qtd</span>
                     <span>Un</span>
                     <span>Vl. unit. est.</span>
@@ -295,14 +296,14 @@ export default function EditalDetalhe({
                       className="grid grid-cols-[1fr_auto_auto_auto] gap-4 py-2 text-slate-700"
                     >
                       <span>{it.descricao}</span>
-                      <span>{it.quantidade ?? "—"}</span>
-                      <span>{it.unidade ?? "—"}</span>
+                      <span>{it.quantidade ?? "â€”"}</span>
+                      <span>{it.unidade ?? "â€”"}</span>
                       <span>{brl(it.valor_unitario_estimado)}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">Nenhum item extraído</p>
+                <p className="text-sm text-slate-400">Nenhum item extraÃ­do</p>
               )}
             </section>
 
