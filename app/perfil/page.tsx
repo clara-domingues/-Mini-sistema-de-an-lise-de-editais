@@ -1,5 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
+
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useMemo,
+  type FormEvent,
+} from "react";
+
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 
@@ -14,53 +22,145 @@ type Profile = {
   responsavel_cargo: string;
 };
 
-const empty: Profile = {
-  razao_social: "", cnpj: "", banco: "", agencia: "", conta: "",
-  responsavel_nome: "", responsavel_cpf: "", responsavel_cargo: "",
+type Message = {
+  type: "ok" | "err";
+  text: string;
 };
 
-const sections: { title: string; fields: { key: keyof Profile; label: string }[] }[] = [
+const emptyProfile: Profile = {
+  razao_social: "",
+  cnpj: "",
+  banco: "",
+  agencia: "",
+  conta: "",
+  responsavel_nome: "",
+  responsavel_cpf: "",
+  responsavel_cargo: "",
+};
+
+const sections: {
+  title: string;
+  description: string;
+  fields: {
+    key: keyof Profile;
+    label: string;
+    placeholder: string;
+    required?: boolean;
+  }[];
+}[] = [
   {
     title: "Dados da empresa",
+    description: "Informações de identificação da empresa.",
     fields: [
-      { key: "razao_social", label: "Razão Social" },
-      { key: "cnpj", label: "CNPJ" },
+      {
+        key: "razao_social",
+        label: "Razão social",
+        placeholder: "Nome registrado da empresa",
+        required: true,
+      },
+      {
+        key: "cnpj",
+        label: "CNPJ",
+        placeholder: "00.000.000/0000-00",
+      },
     ],
   },
   {
     title: "Dados bancários",
+    description: "Informações bancárias utilizadas nas propostas.",
     fields: [
-      { key: "banco", label: "Banco" },
-      { key: "agencia", label: "Agência" },
-      { key: "conta", label: "Conta" },
+      {
+        key: "banco",
+        label: "Banco",
+        placeholder: "Nome do banco",
+      },
+      {
+        key: "agencia",
+        label: "Agência",
+        placeholder: "Número da agência",
+      },
+      {
+        key: "conta",
+        label: "Conta",
+        placeholder: "Número da conta",
+      },
     ],
   },
   {
     title: "Responsável legal",
+    description: "Dados da pessoa responsável pela empresa.",
     fields: [
-      { key: "responsavel_nome", label: "Nome completo" },
-      { key: "responsavel_cpf", label: "CPF" },
-      { key: "responsavel_cargo", label: "Cargo" },
+      {
+        key: "responsavel_nome",
+        label: "Nome completo",
+        placeholder: "Nome do responsável legal",
+      },
+      {
+        key: "responsavel_cpf",
+        label: "CPF",
+        placeholder: "000.000.000-00",
+      },
+      {
+        key: "responsavel_cargo",
+        label: "Cargo",
+        placeholder: "Ex.: Sócio-administrador",
+      },
     ],
   },
 ];
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Ocorreu um erro inesperado. Tente novamente.";
+}
+
 export default function PerfilPage() {
-  const supabase = createClient();
-  const [form, setForm] = useState<Profile>(empty);
+  const supabase = useMemo(() => createClient(), []);
+
+  const [form, setForm] = useState<Profile>(emptyProfile);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [msg, setMsg] = useState<Message | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
+ const loadProfile = useCallback(async () => {
+  setMsg(null);
+
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        throw new Error(
+          "Não foi possível verificar sua autenticação. Entre novamente."
+        );
+      }
+
+      if (!user) {
+        setMsg({
+          type: "err",
+          text: "Você precisa estar autenticado para acessar seu perfil.",
+        });
+
+        return;
+      }
+
+      const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select(
+          "razao_social, cnpj, banco, agencia, conta, responsavel_nome, responsavel_cpf, responsavel_cargo"
+        )
         .eq("id", user.id)
         .maybeSingle();
+
+      if (error) {
+        throw new Error("Não foi possível carregar os dados do perfil.");
+      }
+
       if (data) {
         setForm({
           razao_social: data.razao_social ?? "",
@@ -72,71 +172,221 @@ export default function PerfilPage() {
           responsavel_cpf: data.responsavel_cpf ?? "",
           responsavel_cargo: data.responsavel_cargo ?? "",
         });
+      } else {
+        setForm({ ...emptyProfile });
       }
+    } catch (error: unknown) {
+      setMsg({
+        type: "err",
+        text: getErrorMessage(error),
+      });
+    } finally {
       setLoading(false);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    }
+  }, [supabase]);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+ useEffect(() => {
+  const timer = window.setTimeout(() => {
+    void loadProfile();
+  }, 0);
+
+  return () => {
+    window.clearTimeout(timer);
+  };
+}, [loadProfile]);
+  function handleChange(
+    field: keyof Profile,
+    value: string
+  ) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+
+    setMsg(null);
+  }
+
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (saving) {
+      return;
+    }
+
     setSaving(true);
     setMsg(null);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase
-      .from("profiles")
-      .upsert({ id: user!.id, ...form });
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-    setSaving(false);
-    setMsg(
-      error
-        ? { type: "err", text: error.message }
-        : { type: "ok", text: "Perfil salvo com sucesso!" }
-    );
+      if (authError || !user) {
+        throw new Error(
+          "Sua sessão não está válida. Entre novamente para salvar."
+        );
+      }
+
+      if (!form.razao_social.trim()) {
+        throw new Error("Informe a razão social da empresa.");
+      }
+
+      const profileToSave = {
+        id: user.id,
+        razao_social: form.razao_social.trim(),
+        cnpj: form.cnpj.trim(),
+        banco: form.banco.trim(),
+        agencia: form.agencia.trim(),
+        conta: form.conta.trim(),
+        responsavel_nome: form.responsavel_nome.trim(),
+        responsavel_cpf: form.responsavel_cpf.trim(),
+        responsavel_cargo: form.responsavel_cargo.trim(),
+      };
+
+      const { error } = await supabase
+        .from("profiles")
+        .upsert(profileToSave, {
+          onConflict: "id",
+        });
+
+      if (error) {
+        throw new Error(
+          "Não foi possível salvar o perfil. Verifique sua conexão e tente novamente."
+        );
+      }
+
+      setMsg({
+        type: "ok",
+        text: "Perfil da empresa salvo com sucesso!",
+      });
+    } catch (error: unknown) {
+      setMsg({
+        type: "err",
+        text: getErrorMessage(error),
+      });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <>
       <Nav />
-      <main className="max-w-3xl mx-auto p-4">
-        <h1 className="text-2xl font-bold text-slate-900 mb-1">Perfil da empresa</h1>
-        <p className="text-sm text-slate-500 mb-6">
-          Estes dados são usados automaticamente na geração das propostas.
-        </p>
+
+      <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
+        <header className="mb-8">
+          <span className="text-sm font-semibold uppercase tracking-wider text-blue-600">
+            Configurações
+          </span>
+
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
+            Perfil da empresa
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+            Mantenha os dados da sua empresa atualizados para facilitar
+            o preenchimento de propostas e a organização das informações
+            utilizadas nas análises de editais.
+          </p>
+        </header>
+
+        {msg && (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`mb-6 rounded-xl border p-4 text-sm ${
+              msg.type === "ok"
+                ? "border-green-200 bg-green-50 text-green-800"
+                : "border-red-200 bg-red-50 text-red-800"
+            }`}
+          >
+            {msg.text}
+          </div>
+        )}
 
         {loading ? (
-          <p className="text-slate-500">Carregando...</p>
+          <div
+            className="rounded-xl border border-slate-200 bg-white p-8 text-center"
+            role="status"
+          >
+            <p className="font-medium text-slate-700">
+              Carregando perfil...
+            </p>
+
+            <p className="mt-2 text-sm text-slate-500">
+              Estamos buscando os dados da sua empresa.
+            </p>
+          </div>
         ) : (
           <form onSubmit={handleSave} className="space-y-6">
-            {sections.map((s) => (
-              <section key={s.title} className="bg-white rounded-xl shadow p-5 space-y-3">
-                <h2 className="font-semibold text-slate-800">{s.title}</h2>
-                {s.fields.map((f) => (
-                  <label key={f.key} className="block text-sm">
-                    <span className="text-slate-600">{f.label}</span>
-                    <input
-                      value={form[f.key]}
-                      onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                      className="mt-1 w-full border rounded-lg px-3 py-2"
-                    />
-                  </label>
-                ))}
+            {sections.map((section) => (
+              <section
+                key={section.title}
+                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+              >
+                <div className="mb-5 border-b border-slate-100 pb-4">
+                  <h2 className="text-lg font-semibold text-slate-900">
+                    {section.title}
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    {section.description}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  {section.fields.map((field) => (
+                    <label
+                      key={field.key}
+                      className="block text-sm"
+                    >
+                      <span className="font-medium text-slate-700">
+                        {field.label}
+
+                        {field.required && (
+                          <span className="ml-1 text-red-600">
+                            *
+                          </span>
+                        )}
+                      </span>
+
+                      <input
+                        type="text"
+                        name={field.key}
+                        value={form[field.key]}
+                        onChange={(event) =>
+                          handleChange(
+                            field.key,
+                            event.target.value
+                          )
+                        }
+                        placeholder={field.placeholder}
+                        required={field.required}
+                        autoComplete="off"
+                        disabled={saving}
+                        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                      />
+                    </label>
+                  ))}
+                </div>
               </section>
             ))}
 
-            {msg && (
-              <p className={`text-sm ${msg.type === "ok" ? "text-green-600" : "text-red-600"}`}>
-                {msg.text}
+            <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs leading-5 text-slate-500">
+                Confira os dados antes de salvar. Eles poderão ser
+                utilizados no preenchimento de propostas.
               </p>
-            )}
 
-            <button
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2 font-medium disabled:opacity-50"
-            >
-              {saving ? "Salvando..." : "Salvar perfil"}
-            </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? "Salvando..." : "Salvar alterações"}
+              </button>
+            </div>
           </form>
         )}
       </main>
