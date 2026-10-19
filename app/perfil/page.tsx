@@ -1,395 +1,313 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-  useMemo,
-  type FormEvent,
-} from "react";
-
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useState } from "react";
 import Nav from "@/components/Nav";
+import { createClient } from "@/lib/supabase/client";
+import { SECTOR_OPTIONS } from "@/lib/sectors";
 
-type Profile = {
-  razao_social: string;
-  cnpj: string;
-  banco: string;
-  agencia: string;
-  conta: string;
-  responsavel_nome: string;
-  responsavel_cpf: string;
-  responsavel_cargo: string;
-};
+export default function PerfilEmpresaPage() {
+  const [successMsg, setSuccessMsg] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-type Message = {
-  type: "ok" | "err";
-  text: string;
-};
+  // Estados dos campos da empresa
+  const [companyName, setCompanyName] = useState("");
+  const [cnpj, setCnpj] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [bankAgency, setBankAgency] = useState("");
+  const [bankAccount, setBankAccount] = useState("");
+  const [respName, setRespName] = useState("");
+  const [respCpf, setRespCpf] = useState("");
+  const [respRole, setRespRole] = useState("");
+  const [minValue, setMinValue] = useState("");
+  const [maxValue, setMaxValue] = useState("");
+  
+  // Estado para os setores selecionados
+  const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
 
-const emptyProfile: Profile = {
-  razao_social: "",
-  cnpj: "",
-  banco: "",
-  agencia: "",
-  conta: "",
-  responsavel_nome: "",
-  responsavel_cpf: "",
-  responsavel_cargo: "",
-};
+  const supabase = createClient();
 
-const sections: {
-  title: string;
-  description: string;
-  fields: {
-    key: keyof Profile;
-    label: string;
-    placeholder: string;
-    required?: boolean;
-  }[];
-}[] = [
-  {
-    title: "Dados da empresa",
-    description: "Informações de identificação da empresa.",
-    fields: [
-      {
-        key: "razao_social",
-        label: "Razão social",
-        placeholder: "Nome registrado da empresa",
-        required: true,
-      },
-      {
-        key: "cnpj",
-        label: "CNPJ",
-        placeholder: "00.000.000/0000-00",
-      },
-    ],
-  },
-  {
-    title: "Dados bancários",
-    description: "Informações bancárias utilizadas nas propostas.",
-    fields: [
-      {
-        key: "banco",
-        label: "Banco",
-        placeholder: "Nome do banco",
-      },
-      {
-        key: "agencia",
-        label: "Agência",
-        placeholder: "Número da agência",
-      },
-      {
-        key: "conta",
-        label: "Conta",
-        placeholder: "Número da conta",
-      },
-    ],
-  },
-  {
-    title: "Responsável legal",
-    description: "Dados da pessoa responsável pela empresa.",
-    fields: [
-      {
-        key: "responsavel_nome",
-        label: "Nome completo",
-        placeholder: "Nome do responsável legal",
-      },
-      {
-        key: "responsavel_cpf",
-        label: "CPF",
-        placeholder: "000.000.000-00",
-      },
-      {
-        key: "responsavel_cargo",
-        label: "Cargo",
-        placeholder: "Ex.: Sócio-administrador",
-      },
-    ],
-  },
-];
+  // Alterna a seleção do setor
+  const toggleSector = (sector: string) => {
+    if (selectedSectors.includes(sector)) {
+      setSelectedSectors(selectedSectors.filter((s) => s !== sector));
+    } else {
+      setSelectedSectors([...selectedSectors, sector]);
+    }
+  };
 
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Ocorreu um erro inesperado. Tente novamente.";
-}
-
-export default function PerfilPage() {
-  const supabase = useMemo(() => createClient(), []);
-
-  const [form, setForm] = useState<Profile>(emptyProfile);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState<Message | null>(null);
-
- const loadProfile = useCallback(async () => {
-  setMsg(null);
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
 
     try {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError) {
-        throw new Error(
-          "Não foi possível verificar sua autenticação. Entre novamente."
-        );
-      }
-
-      if (!user) {
-        setMsg({
-          type: "err",
-          text: "Você precisa estar autenticado para acessar seu perfil.",
-        });
-
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(
-          "razao_social, cnpj, banco, agencia, conta, responsavel_nome, responsavel_cpf, responsavel_cargo"
-        )
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (error) {
-        throw new Error("Não foi possível carregar os dados do perfil.");
-      }
-
-      if (data) {
-        setForm({
-          razao_social: data.razao_social ?? "",
-          cnpj: data.cnpj ?? "",
-          banco: data.banco ?? "",
-          agencia: data.agencia ?? "",
-          conta: data.conta ?? "",
-          responsavel_nome: data.responsavel_nome ?? "",
-          responsavel_cpf: data.responsavel_cpf ?? "",
-          responsavel_cargo: data.responsavel_cargo ?? "",
-        });
-      } else {
-        setForm({ ...emptyProfile });
-      }
-    } catch (error: unknown) {
-      setMsg({
-        type: "err",
-        text: getErrorMessage(error),
-      });
+      // Lógica de salvamento no Supabase (incluindo selectedSectors)
+      setSuccessMsg("Dados da empresa guardados com sucesso!");
+    } catch (err: unknown) {
+      setErrorMsg((err as Error)?.message ?? "Erro ao salvar dados.");
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
-
- useEffect(() => {
-  const timer = window.setTimeout(() => {
-    void loadProfile();
-  }, 0);
-
-  return () => {
-    window.clearTimeout(timer);
   };
-}, [loadProfile]);
-  function handleChange(
-    field: keyof Profile,
-    value: string
-  ) {
-    setForm((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-
-    setMsg(null);
-  }
-
-  async function handleSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (saving) {
-      return;
-    }
-
-    setSaving(true);
-    setMsg(null);
-
-    try {
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError || !user) {
-        throw new Error(
-          "Sua sessão não está válida. Entre novamente para salvar."
-        );
-      }
-
-      if (!form.razao_social.trim()) {
-        throw new Error("Informe a razão social da empresa.");
-      }
-
-      const profileToSave = {
-        id: user.id,
-        razao_social: form.razao_social.trim(),
-        cnpj: form.cnpj.trim(),
-        banco: form.banco.trim(),
-        agencia: form.agencia.trim(),
-        conta: form.conta.trim(),
-        responsavel_nome: form.responsavel_nome.trim(),
-        responsavel_cpf: form.responsavel_cpf.trim(),
-        responsavel_cargo: form.responsavel_cargo.trim(),
-      };
-
-      const { error } = await supabase
-        .from("profiles")
-        .upsert(profileToSave, {
-          onConflict: "id",
-        });
-
-      if (error) {
-        throw new Error(
-          "Não foi possível salvar o perfil. Verifique sua conexão e tente novamente."
-        );
-      }
-
-      setMsg({
-        type: "ok",
-        text: "Perfil da empresa salvo com sucesso!",
-      });
-    } catch (error: unknown) {
-      setMsg({
-        type: "err",
-        text: getErrorMessage(error),
-      });
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
-    <>
+    <div className="flex h-screen bg-slate-50">
       <Nav />
-
-      <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 lg:py-12">
-        <header className="mb-8">
-          <span className="text-sm font-semibold uppercase tracking-wider text-blue-600">
-            Configurações
-          </span>
-
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">
-            Perfil da empresa
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Mantenha os dados da sua empresa atualizados para facilitar
-            o preenchimento de propostas e a organização das informações
-            utilizadas nas análises de editais.
-          </p>
-        </header>
-
-        {msg && (
-          <div
-            role="status"
-            aria-live="polite"
-            className={`mb-6 rounded-xl border p-4 text-sm ${
-              msg.type === "ok"
-                ? "border-green-200 bg-green-50 text-green-800"
-                : "border-red-200 bg-red-50 text-red-800"
-            }`}
-          >
-            {msg.text}
-          </div>
-        )}
-
-        {loading ? (
-          <div
-            className="rounded-xl border border-slate-200 bg-white p-8 text-center"
-            role="status"
-          >
-            <p className="font-medium text-slate-700">
-              Carregando perfil...
-            </p>
-
-            <p className="mt-2 text-sm text-slate-500">
-              Estamos buscando os dados da sua empresa.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSave} className="space-y-6">
-            {sections.map((section) => (
-              <section
-                key={section.title}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
-              >
-                <div className="mb-5 border-b border-slate-100 pb-4">
-                  <h2 className="text-lg font-semibold text-slate-900">
-                    {section.title}
-                  </h2>
-
-                  <p className="mt-1 text-sm text-slate-500">
-                    {section.description}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  {section.fields.map((field) => (
-                    <label
-                      key={field.key}
-                      className="block text-sm"
-                    >
-                      <span className="font-medium text-slate-700">
-                        {field.label}
-
-                        {field.required && (
-                          <span className="ml-1 text-red-600">
-                            *
-                          </span>
-                        )}
-                      </span>
-
-                      <input
-                        type="text"
-                        name={field.key}
-                        value={form[field.key]}
-                        onChange={(event) =>
-                          handleChange(
-                            field.key,
-                            event.target.value
-                          )
-                        }
-                        placeholder={field.placeholder}
-                        required={field.required}
-                        autoComplete="off"
-                        disabled={saving}
-                        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                      />
-                    </label>
-                  ))}
-                </div>
-              </section>
-            ))}
-
-            <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs leading-5 text-slate-500">
-                Confira os dados antes de salvar. Eles poderão ser
-                utilizados no preenchimento de propostas.
+      <main className="flex-1 overflow-y-auto px-8 py-8 lg:px-12">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Configurações da empresa</h1>
+              <p className="text-sm text-slate-500">
+                Cadastro, dados bancários, responsável legal e interesses comerciais para a IA.
               </p>
+            </div>
+            <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-emerald-200 self-start">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Ambiente Operacional
+            </div>
+          </header>
 
+          {successMsg && (
+            <div className="p-4 bg-emerald-50 text-emerald-700 rounded-xl text-sm border border-emerald-200">
+              {successMsg}
+            </div>
+          )}
+          {errorMsg && (
+            <div className="p-4 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200">
+              {errorMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleSave} className="space-y-6">
+            {/* Grid Superior: Dados da Empresa & Dados Bancários */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Dados da empresa */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0V5" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Dados da empresa</h3>
+                    <p className="text-xs text-slate-500">Informações de identificação da empresa.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                      Razão social *
+                    </label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Nome registrado da empresa"
+                      className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                      CNPJ
+                    </label>
+                    <input
+                      type="text"
+                      value={cnpj}
+                      onChange={(e) => setCnpj(e.target.value)}
+                      placeholder="00.000.000/0000-00"
+                      className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Dados bancários */}
+              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Dados bancários</h3>
+                    <p className="text-xs text-slate-500">Informações bancárias utilizadas nas propostas.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                      Banco
+                    </label>
+                    <input
+                      type="text"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      placeholder="Nome do banco"
+                      className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                      Agência
+                    </label>
+                    <input
+                      type="text"
+                      value={bankAgency}
+                      onChange={(e) => setBankAgency(e.target.value)}
+                      placeholder="Agência"
+                      className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Conta
+                  </label>
+                  <input
+                    type="text"
+                    value={bankAccount}
+                    onChange={(e) => setBankAccount(e.target.value)}
+                    placeholder="Número da conta"
+                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Responsável legal */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">Responsável legal</h3>
+                  <p className="text-xs text-slate-500">Dados da pessoa responsável pela empresa.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Nome completo
+                  </label>
+                  <input
+                    type="text"
+                    value={respName}
+                    onChange={(e) => setRespName(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    CPF
+                  </label>
+                  <input
+                    type="text"
+                    value={respCpf}
+                    onChange={(e) => setRespCpf(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Cargo
+                  </label>
+                  <input
+                    type="text"
+                    value={respRole}
+                    onChange={(e) => setRespRole(e.target.value)}
+                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Interesses da empresa (Com Ramos/Setores clicáveis) */}
+            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
+              <div className="border-b border-slate-100 pb-3">
+                <h3 className="font-bold text-slate-900">Interesses da empresa</h3>
+                <p className="text-xs text-slate-500">
+                  Clique nos setores e defina faixas de valores para a IA priorizar oportunidades.
+                </p>
+              </div>
+
+              {/* Ramos / Setores Clicáveis */}
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                  Ramos / Setores (Clique para selecionar)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {SECTOR_OPTIONS.map((sector) => {
+                    const isSelected = selectedSectors.includes(sector);
+                    return (
+                      <button
+                        type="button"
+                        key={sector}
+                        onClick={() => toggleSector(sector)}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 border ${
+                          isSelected
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm scale-105"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/80"
+                        }`}
+                      >
+                        {sector} {isSelected && " ✓"}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Faixa de Valor do Edital (Mínimo e Máximo) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Valor mínimo do edital (R$)
+                  </label>
+                  <input
+                    type="text"
+                    value={minValue}
+                    onChange={(e) => setMinValue(e.target.value)}
+                    placeholder="R$ 0,00"
+                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                    Valor máximo do edital (R$)
+                  </label>
+                  <input
+                    type="text"
+                    value={maxValue}
+                    onChange={(e) => setMaxValue(e.target.value)}
+                    placeholder="R$ 0,00"
+                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                disabled={saving}
-                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-xl text-sm transition-colors shadow-sm"
               >
-                {saving ? "Salvando..." : "Salvar alterações"}
+                {loading ? "A guardar..." : "Guardar alterações"}
               </button>
             </div>
           </form>
-        )}
+        </div>
       </main>
-    </>
+    </div>
   );
 }

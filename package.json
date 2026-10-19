@@ -9,9 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@langchain/core": "^1.2.18",
+    "@langchain/openai": "^1.6.2",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.3",
     "docx": "^9.9.0",
+    "langchain": "^1.5.18",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

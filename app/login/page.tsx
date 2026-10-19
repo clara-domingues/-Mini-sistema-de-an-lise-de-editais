@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -55,74 +56,110 @@ export default function LoginPage() {
   }
 
   const titles: Record<Mode, string> = {
-    login: "Entrar",
-    signup: "Criar conta",
+    login: "Entrar na plataforma",
+    signup: "Criar nova conta",
     magic: "Entrar com Magic Link",
   };
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm bg-white rounded-xl shadow p-6 space-y-4"
-      >
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">EditalAI</h1>
-          <p className="text-sm text-slate-500">{titles[mode]}</p>
+    <main className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-800/10 p-8 space-y-6">
+        
+        {/* Cabeçalho com o novo branding BidMaster AI */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center justify-center bg-blue-600 text-white font-bold p-3 rounded-2xl shadow-md mb-1">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0V5" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">BidMaster AI</h1>
+          <p className="text-sm font-medium text-slate-500">{titles[mode]}</p>
         </div>
 
-        <input
-          type="email"
-          required
-          placeholder="E-mail"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2"
-        />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+              E-mail
+            </label>
+            <input
+              type="email"
+              required
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border border-slate-300 rounded-xl px-3.5 py-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none transition"
+            />
+          </div>
 
-        {mode !== "magic" && (
-          <input
-            type="password"
-            required
-            minLength={6}
-            placeholder="Senha (mín. 6 caracteres)"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
-          />
-        )}
+          {mode !== "magic" && (
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5">
+                Senha
+              </label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                placeholder="•••••••• (mín. 6 caracteres)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-slate-300 rounded-xl px-3.5 py-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none transition"
+              />
+            </div>
+          )}
 
-        {msg && (
-          <p className={`text-sm ${msg.type === "ok" ? "text-green-600" : "text-red-600"}`}>
-            {msg.text}
-          </p>
-        )}
+          {msg && (
+            <div
+              className={`p-3.5 rounded-xl text-sm border ${
+                msg.type === "ok"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-red-50 text-red-700 border-red-200"
+              }`}
+            >
+              {msg.text}
+            </div>
+          )}
 
-        <button
-          disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-lg py-2 font-medium disabled:opacity-50"
-        >
-          {loading ? "Aguarde..." : titles[mode]}
-        </button>
+          <button
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl py-3 text-sm transition-colors shadow-sm disabled:opacity-50"
+          >
+            {loading ? "Aguarde..." : titles[mode]}
+          </button>
+        </form>
 
-        <div className="flex flex-col gap-1 text-sm text-blue-600 text-center">
+        {/* Navegação entre modos */}
+        <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 text-sm text-center">
           {mode !== "login" && (
-            <button type="button" onClick={() => setMode("login")}>
+            <button
+              type="button"
+              onClick={() => { setMsg(null); setMode("login"); }}
+              className="text-blue-600 hover:text-blue-800 font-medium transition"
+            >
               Já tenho conta
             </button>
           )}
           {mode !== "signup" && (
-            <button type="button" onClick={() => setMode("signup")}>
+            <button
+              type="button"
+              onClick={() => { setMsg(null); setMode("signup"); }}
+              className="text-blue-600 hover:text-blue-800 font-medium transition"
+            >
               Criar conta
             </button>
           )}
           {mode !== "magic" && (
-            <button type="button" onClick={() => setMode("magic")}>
+            <button
+              type="button"
+              onClick={() => { setMsg(null); setMode("magic"); }}
+              className="text-slate-500 hover:text-slate-700 text-xs transition"
+            >
               Entrar com Magic Link
             </button>
           )}
         </div>
-      </form>
+
+      </div>
     </main>
   );
 }
