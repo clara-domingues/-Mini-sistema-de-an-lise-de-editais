@@ -27,6 +27,40 @@ export default function PerfilEmpresaPage() {
 
   const supabase = createClient();
 
+  // Carregar dados existentes do perfil ao abrir a página
+  useEffect(() => {
+    async function loadPerfil() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data, error } = await supabase
+          .from("company_profiles")
+          .select("*")
+          .eq("tenant_id", user.id)
+          .maybeSingle();
+
+        if (!error && data) {
+          setCompanyName(data.razao_social || "");
+          setCnpj(data.cnpj || "");
+          setBankName(data.banco || "");
+          setBankAgency(data.agencia || "");
+          setBankAccount(data.conta || "");
+          setRespName(data.nome_completo || "");
+          setRespCpf(data.cpf || "");
+          setRespRole(data.cargo || "");
+          setMinValue(data.min_value || "");
+          setMaxValue(data.max_value || "");
+          setSelectedSectors(data.sectors || []);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar perfil:", err);
+      }
+    }
+
+    void loadPerfil();
+  }, [supabase]);
+
   // Alterna a seleção do setor
   const toggleSector = (sector: string) => {
     if (selectedSectors.includes(sector)) {
@@ -43,7 +77,34 @@ export default function PerfilEmpresaPage() {
     setSuccessMsg("");
 
     try {
-      // Lógica de salvamento no Supabase (incluindo selectedSectors)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Utilizador não autenticado.");
+      }
+
+      const payload = {
+        tenant_id: user.id,
+        razao_social: companyName,
+        cnpj,
+        banco: bankName,
+        agencia: bankAgency,
+        conta: bankAccount,
+        nome_completo: respName,
+        cpf: respCpf,
+        cargo: respRole,
+        min_value: minValue,
+        max_value: maxValue,
+        sectors: selectedSectors,
+      };
+
+      const { error } = await supabase
+        .from("company_profiles")
+        .upsert(payload, { onConflict: "tenant_id" });
+
+      if (error) {
+        throw error;
+      }
+
       setSuccessMsg("Dados da empresa guardados com sucesso!");
     } catch (err: unknown) {
       setErrorMsg((err as Error)?.message ?? "Erro ao salvar dados.");
@@ -105,6 +166,7 @@ export default function PerfilEmpresaPage() {
                     </label>
                     <input
                       type="text"
+                      required
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       placeholder="Nome registrado da empresa"

@@ -47,7 +47,6 @@ function getErrorMessage(error: unknown) {
   if (error instanceof Error) {
     return error.message;
   }
-
   return "Não foi possível salvar a alteração.";
 }
 
@@ -66,14 +65,11 @@ export default function GoNoGo({
   );
 
   const [decision, setDecision] = useState<Decision>(initialDecision);
-
   const [err, setErr] = useState<string | null>(null);
-
   const [savingItem, setSavingItem] = useState<number | null>(null);
-
   const [savingDecision, setSavingDecision] = useState<Decision>(null);
-
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
 
   const total = items.length;
 
@@ -88,7 +84,6 @@ export default function GoNoGo({
     if (total === 0) {
       return 0;
     }
-
     return Math.round((atendidos / total) * 100);
   }, [atendidos, total]);
 
@@ -118,6 +113,45 @@ export default function GoNoGo({
       };
     });
   }, [categorias, items]);
+
+  // Função para extrair requisitos automaticamente via API de IA
+  async function extrairComIA() {
+    setLoadingAI(true);
+    setErr(null);
+    setSavedMessage(null);
+
+    try {
+      const res = await fetch("/api/chat-edital/go-no-go", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editalId: bidId }),
+      });
+      const data = await res.json();
+
+      if (data.success && data.requisitos && data.requisitos.length > 0) {
+        const novosItens: CheckItem[] = data.requisitos.map((r: { categoria: string; descricao: string; atendido: boolean }) => ({
+          categoria: r.categoria,
+          texto: r.descricao,
+          ok: r.atendido ?? false,
+        }));
+
+        setItems(novosItens);
+
+        await supabase
+          .from("bids")
+          .update({ checklist: novosItens })
+          .eq("id", bidId);
+
+        setSavedMessage("Requisitos extraídos e salvos com sucesso pela IA!");
+      } else {
+        setErr("A IA não retornou requisitos para este edital.");
+      }
+    } catch (e) {
+      setErr(getErrorMessage(e));
+    } finally {
+      setLoadingAI(false);
+    }
+  }
 
   async function toggle(index: number) {
     if (savingItem !== null || savingDecision !== null) {
@@ -161,6 +195,7 @@ export default function GoNoGo({
     setSavingItem(null);
   }
 
+  // CORRIGIDO: Tentativa com valor em caixa alta, caixa baixa e fallback de coluna 'decision'
   async function decidir(nextDecision: "go" | "no_go") {
     if (savingItem !== null || savingDecision !== null) {
       return;
@@ -173,16 +208,35 @@ export default function GoNoGo({
     setErr(null);
     setSavedMessage(null);
 
-    const { error } = await supabase
+    const valorStatus = nextDecision === "go" ? "GO" : "NO_GO";
+
+    let { error } = await supabase
       .from("bids")
       .update({
-        decision: nextDecision,
+        status: valorStatus,
       })
       .eq("id", bidId);
 
     if (error) {
-      setDecision(previousDecision);
+      const resFallback1 = await supabase
+        .from("bids")
+        .update({ status: nextDecision })
+        .eq("id", bidId);
 
+      error = resFallback1.error;
+
+      if (error) {
+        const resFallback2 = await supabase
+          .from("bids")
+          .update({ decision: nextDecision })
+          .eq("id", bidId);
+
+        error = resFallback2.error;
+      }
+    }
+
+    if (error) {
+      setDecision(previousDecision);
       setErr(
         `Não foi possível salvar sua decisão: ${getErrorMessage(
           error
@@ -220,17 +274,28 @@ export default function GoNoGo({
             </p>
           </div>
 
-          {total > 0 && (
-            <div className="shrink-0 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Aderência
-              </p>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => void extrairComIA()}
+              disabled={loadingAI}
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              {loadingAI ? "Extraindo com IA..." : "🤖 Extrair Requisitos com IA"}
+            </button>
 
-              <p className="mt-1 text-2xl font-bold text-slate-900">
-                {percentual}%
-              </p>
-            </div>
-          )}
+            {total > 0 && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                  Aderência
+                </p>
+
+                <p className="mt-1 text-xl font-bold text-slate-900">
+                  {percentual}%
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -388,7 +453,7 @@ export default function GoNoGo({
         </div>
       )}
 
-      {/* SEM REQUISITOS */}
+      {/* ALERTA SEM REQUISITOS */}
       {items.length === 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <div className="flex gap-3">
@@ -402,9 +467,7 @@ export default function GoNoGo({
               </h3>
 
               <p className="mt-1 text-sm leading-6 text-amber-800">
-                A análise automática não encontrou requisitos
-                estruturados de habilitação. Confira o edital
-                manualmente antes de decidir pela participação.
+                A análise automática ainda não encontrou requisitos estruturados de habilitação para este edital. Clique no botão de IA no topo para realizar a extração.
               </p>
             </div>
           </div>
@@ -510,53 +573,6 @@ export default function GoNoGo({
           </div>
         );
       })}
-
-      {/* ALERTA DE PENDÊNCIAS */}
-      {items.length > 0 && pendentes > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="flex gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-800">
-              !
-            </span>
-
-            <div>
-              <h3 className="text-sm font-semibold text-amber-900">
-                Existem requisitos pendentes
-              </h3>
-
-              <p className="mt-1 text-sm leading-6 text-amber-800">
-                {pendentes} exigência(s) ainda não foram marcadas
-                como atendidas. Isso pode representar risco de
-                inabilitação e deve ser verificado antes da decisão
-                final.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TUDO ATENDIDO */}
-      {items.length > 0 && pendentes === 0 && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-          <div className="flex gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800">
-              ✓
-            </span>
-
-            <div>
-              <h3 className="text-sm font-semibold text-emerald-900">
-                Todas as exigências foram marcadas como atendidas
-              </h3>
-
-              <p className="mt-1 text-sm leading-6 text-emerald-800">
-                A checklist está completa. Ainda assim, confirme os
-                documentos e condições diretamente no edital antes de
-                finalizar sua decisão.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* DECISÃO */}
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">

@@ -47,6 +47,10 @@ export default function EditaisKanbanPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Estados de Filtros e Busca
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("TODOS");
+
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [clientId, setClientId] = useState("");
@@ -243,6 +247,17 @@ export default function EditaisKanbanPage() {
     }).format(val || 0);
   };
 
+  // Filtragem dinâmica de editais
+  const editaisFiltrados = bids.filter((bid) => {
+    const atendeBusca =
+      bid.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (bid.clients?.name && bid.clients.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const atendeStatus = statusFilter === "TODOS" || normalizeStatus(bid.status) === statusFilter;
+
+    return atendeBusca && atendeStatus;
+  });
+
   const errorBanner = errorMsg && (
     <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
       {errorMsg}
@@ -277,18 +292,48 @@ export default function EditaisKanbanPage() {
 
           {errorBanner}
 
+          {/* Barra de Pesquisa e Filtros */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm shrink-0">
+            <div className="w-full sm:w-80">
+              <input
+                type="text"
+                placeholder="🔍 Buscar por edital ou órgão..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 placeholder-slate-400"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <label htmlFor="filtroStatusSelect" className="text-xs font-bold text-slate-500 uppercase">Filtrar Coluna:</label>
+              <select
+                id="filtroStatusSelect"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="TODOS">Todas as Colunas ({bids.length})</option>
+                {COLUMNS.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {loading ? (
             <div className="flex h-64 items-center justify-center text-slate-500">
               Carregando Kanban...
             </div>
           ) : (
-            <div className="flex flex-1 gap-4 overflow-x-auto pb-6">
+            <div className="flex flex-1 gap-4 overflow-x-auto pb-6 min-w-0">
               {COLUMNS.map((col) => {
-                const columnBids = bids.filter((b) => normalizeStatus(b.status) === col.id);
+                const columnBids = editaisFiltrados.filter((b) => normalizeStatus(b.status) === col.id);
                 return (
                   <div
                     key={col.id}
-                    className="flex w-72 shrink-0 flex-col rounded-2xl bg-slate-200/70 p-4 border border-slate-300/60 max-h-[calc(100vh-220px)] overflow-hidden shadow-sm"
+                    className="flex w-72 shrink-0 flex-col rounded-2xl bg-slate-200/70 p-4 border border-slate-300/60 max-h-[calc(100vh-280px)] overflow-hidden shadow-sm"
                   >
                     <div className="flex items-center justify-between pb-3 border-b border-slate-300">
                       <div className="flex items-center gap-2">
@@ -312,7 +357,7 @@ export default function EditaisKanbanPage() {
                             href={`/editais/${bid.id}`}
                             className="group relative flex flex-col rounded-xl bg-white p-4 shadow-sm border border-slate-200 hover:shadow-md hover:border-blue-300 transition cursor-pointer"
                           >
-                            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wide">
+                            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wide truncate">
                               {bid.clients?.name || "Cliente não informado"}
                             </span>
                             <h4 className="font-semibold text-sm text-slate-900 mt-1 line-clamp-2 group-hover:text-blue-600 transition">
@@ -321,10 +366,12 @@ export default function EditaisKanbanPage() {
 
                             <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500">
                               <span>{formatBRL(bid.estimated_value)}</span>
-                              {bid.deadline && (
+                              {bid.deadline ? (
                                 <span className="font-medium text-slate-600">
                                   📅 {new Date(bid.deadline).toLocaleDateString("pt-BR")}
                                 </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-400">Data a definir</span>
                               )}
                             </div>
 
