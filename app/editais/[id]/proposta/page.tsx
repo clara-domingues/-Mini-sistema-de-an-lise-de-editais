@@ -6,6 +6,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import Nav from "@/components/Nav";
 
+// Import da função de geração em Word (.docx)
+import { gerarDocumentoProposta } from "./utils/exportDocx";
+import { CommercialProposalInput } from "./types/proposal";
+
 type BidDetail = {
   id: string;
   title: string;
@@ -27,7 +31,6 @@ type PropostaVersao = {
   id: string;
   nome_versao: string;
   valor_base: number;
-  margem_bdi: number;
   valor_global: number;
   condicoes_pagamento: string;
   validade_proposta: string;
@@ -43,40 +46,41 @@ export default function PropostaPage() {
   const [company, setCompany] = useState<CompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Estados de Custos e Margem / BDI
+  // Estados de Custos (Padrão Seguro sem BDI visível na proposta final)
   const [valorBase, setValorBase] = useState<number>(0);
-  const [margemBdi, setMargemBdi] = useState<number>(10);
   const [valorGlobal, setValorGlobal] = useState<string>("0.00");
 
-  // Campos de texto editáveis
-  const [condicoesPagamento, setCondicoesPagamento] = useState<string>("Conforme estabelecido no edital.");
-  const [validadeProposta, setValidadeProposta] = useState<string>("60 (sessenta) dias corridos a contar da data de abertura.");
+  // Campos de texto editáveis alinhados ao padrão Seguro
+  const [condicoesPagamento, setCondicoesPagamento] = useState<string>(
+    "Prazo de Pagamento: 180 dias (com possibilidade de antecipação via Operação Confirming)."
+  );
+  const [validadeProposta, setValidadeProposta] = useState<string>(
+    "60 (sessenta) dias corridos a contar da data de sua apresentação."
+  );
 
   // Histórico de Versões
   const [versoes, setVersoes] = useState<PropostaVersao[]>([]);
   const [versaoSelecionadaId, setVersaoSelecionadaId] = useState<string>("");
   const [salvandoVersao, setSalvandoVersao] = useState(false);
+  const [gerandoDocx, setGerandoDocx] = useState(false);
 
   const rawId = params?.id;
   const editalId = Array.isArray(rawId) ? rawId[0] : rawId;
 
-  const calcularGlobalStr = useCallback((base: number, margem: number) => {
-    const acrescimo = base * (margem / 100);
-    const total = base + acrescimo;
-    return total.toFixed(2);
-  }, []);
+  const fetchVersoes = useCallback(
+    async (id: string) => {
+      const { data, error } = await supabase
+        .from("proposta_versoes")
+        .select("*")
+        .eq("edital_id", id)
+        .order("created_at", { ascending: false });
 
-  const fetchVersoes = useCallback(async (id: string) => {
-    const { data, error } = await supabase
-      .from("proposta_versoes")
-      .select("*")
-      .eq("edital_id", id)
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setVersoes(data as PropostaVersao[]);
-    }
-  }, [supabase]);
+      if (!error && data) {
+        setVersoes(data as PropostaVersao[]);
+      }
+    },
+    [supabase]
+  );
 
   useEffect(() => {
     async function fetchBidData() {
@@ -114,7 +118,6 @@ export default function PropostaPage() {
           }
         }
 
-        // Busca flexível dos dados da empresa
         const { data: profileData } = await supabase
           .from("company_profiles")
           .select("*")
@@ -125,7 +128,6 @@ export default function PropostaPage() {
           setCompany(profileData as CompanyProfile);
         }
 
-        // Tenta buscar valor atualizado do dimensionamento
         try {
           const res = await fetch("/api/chat-edital/dimensionamento", {
             method: "POST",
@@ -141,10 +143,9 @@ export default function PropostaPage() {
         }
 
         setValorBase(custoInicial);
-        setValorGlobal(calcularGlobalStr(custoInicial, 10));
+        setValorGlobal(custoInicial.toFixed(2));
 
         await fetchVersoes(editalId);
-
       } catch (err) {
         console.error("Erro inesperado:", err);
       } finally {
@@ -153,29 +154,29 @@ export default function PropostaPage() {
     }
 
     void fetchBidData();
-  }, [editalId, supabase, calcularGlobalStr, fetchVersoes]);
-
-  const handleMargemChange = (novaMargem: number) => {
-    setMargemBdi(novaMargem);
-    setValorGlobal(calcularGlobalStr(valorBase, novaMargem));
-  };
+  }, [editalId, supabase, fetchVersoes]);
 
   const handleSalvarVersao = async () => {
     if (!editalId) return;
 
-    const nomeVersao = prompt("Dê um nome para esta versão da proposta:", `Versão ${versoes.length + 1} (${margemBdi}% BDI)`);
+    const nomeVersao = prompt(
+      "Dê um nome para esta versão da proposta:",
+      `Versão ${versoes.length + 1}`
+    );
     if (!nomeVersao) return;
 
     setSalvandoVersao(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       const { error } = await supabase.from("proposta_versoes").insert({
         edital_id: editalId,
         tenant_id: user?.id,
         nome_versao: nomeVersao,
         valor_base: valorBase,
-        margem_bdi: margemBdi,
+        margem_bdi: 0,
         valor_global: Number(valorGlobal),
         condicoes_pagamento: condicoesPagamento,
         validade_proposta: validadeProposta,
@@ -200,10 +201,68 @@ export default function PropostaPage() {
     const v = versoes.find((item) => item.id === versaoId);
     if (v) {
       setValorBase(Number(v.valor_base));
-      setMargemBdi(Number(v.margem_bdi));
       setValorGlobal(Number(v.valor_global).toFixed(2));
       if (v.condicoes_pagamento) setCondicoesPagamento(v.condicoes_pagamento);
       if (v.validade_proposta) setValidadeProposta(v.validade_proposta);
+    }
+  };
+
+  // Função para exportar a proposta formatada em Word (.docx)
+  const handleBaixarDocx = async () => {
+    if (!bid) return;
+
+    setGerandoDocx(true);
+    try {
+      const valorNumerico = parseFloat(valorGlobal) || valorBase || 0;
+
+      const proposalData: CommercialProposalInput = {
+        cliente: clientName,
+        objeto: bid.title,
+        prazoMeses: 36,
+        itens: [
+          {
+            id: "1",
+            cargo: "Vigilante / Posto de Segurança",
+            quantidade: 1,
+            salarioBase: valorNumerico > 0 ? valorNumerico / 36 : 2500,
+            periculosidadePercentual: 0.3,
+            encargosSociaisPercentual: 0.82,
+            tipoJornada: "12h Diurna",
+          },
+        ],
+        custosInsumos: {
+          alimentacaoUnitaria: 22.5,
+          diasAlimentacaoMes: 15.25,
+          planoSaudeUnitario: 350,
+          caixaAssistenciaUnitaria: 50,
+          valeTransporteUnitario: 200,
+          seguroDeVidaUnitario: 30,
+          treinamentoUnitario: 65,
+          uniformesEPIsUnitario: 120,
+          comunicacaoMovelUnitario: 80,
+        },
+        veiculos: [],
+        bdi: {
+          administracaoCentral: 0.0983,
+          reajusteAnual: 0.07,
+          despesasFinanceiras: 0.022,
+          lucro: 0.0491,
+        },
+        tributos: {
+          cofins: 0.03,
+          pis: 0.0065,
+          iss: 0.05,
+          csll: 0.01,
+          irpj: 0.01,
+        },
+      };
+
+      await gerarDocumentoProposta(proposalData);
+    } catch (err) {
+      console.error("Erro ao gerar DOCX:", err);
+      alert("Houve um erro ao gerar o arquivo em Word.");
+    } finally {
+      setGerandoDocx(false);
     }
   };
 
@@ -217,20 +276,27 @@ export default function PropostaPage() {
 
   if (!editalId || loading) {
     return (
-      <div className="flex min-h-screen bg-slate-100">
+      <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950 transition-colors">
         <Nav />
-        <main className="flex-1 p-8 text-slate-500 font-medium">Carregando dados da proposta...</main>
+        <main className="flex-1 p-8 font-medium text-slate-500 dark:text-slate-400">
+          Carregando dados da proposta...
+        </main>
       </div>
     );
   }
 
   if (!bid) {
     return (
-      <div className="flex min-h-screen bg-slate-100">
+      <div className="flex min-h-screen bg-slate-100 dark:bg-slate-950 transition-colors">
         <Nav />
         <main className="flex-1 p-8">
-          <p className="text-red-600 font-semibold">Edital não encontrado para gerar proposta.</p>
-          <Link href="/editais" className="mt-4 inline-block text-blue-600 hover:underline">
+          <p className="font-semibold text-red-600 dark:text-red-400">
+            Edital não encontrado para gerar proposta.
+          </p>
+          <Link
+            href="/editais"
+            className="mt-4 inline-block text-blue-600 dark:text-blue-400 hover:underline"
+          >
             ← Voltar para editais
           </Link>
         </main>
@@ -239,163 +305,216 @@ export default function PropostaPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-100 print:bg-white">
+    <div className="flex min-h-screen w-full bg-slate-100 dark:bg-slate-950 print:bg-white dark:print:bg-white transition-colors">
       <div className="print:hidden">
         <Nav />
       </div>
 
-      <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-8 lg:px-12 text-slate-900 space-y-6 max-w-4xl mx-auto print:p-0 print:m-0 print:max-w-none">
-        
-        {/* Barra superior de ações, versões e BDI */}
-        <div className="print:hidden flex flex-col gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <Link href={`/editais/${bid.id}`} className="text-sm font-semibold text-blue-600 hover:underline">
+      <main className="mx-auto max-w-4xl flex-1 space-y-6 overflow-y-auto px-4 py-8 text-slate-900 dark:text-slate-100 sm:px-8 lg:px-12 print:m-0 print:max-w-none print:p-0">
+        {/* Barra superior de ações e versões */}
+        <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm transition-colors print:hidden">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <Link
+              href={`/editais/${bid.id}`}
+              className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
               ← Voltar para os detalhes
             </Link>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <div className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">
               <button
                 type="button"
                 onClick={handleSalvarVersao}
                 disabled={salvandoVersao}
-                className="rounded-xl border border-blue-600 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition disabled:opacity-50"
+                className="rounded-xl border border-blue-600 dark:border-blue-500 px-4 py-2 text-sm font-semibold text-blue-600 dark:text-blue-400 transition hover:bg-blue-50 dark:hover:bg-blue-950/50 disabled:opacity-50"
               >
                 {salvandoVersao ? "A guardar..." : "💾 Guardar Versão"}
               </button>
+
+              <button
+                type="button"
+                onClick={handleBaixarDocx}
+                disabled={gerandoDocx}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {gerandoDocx ? "Gerando Word..." : "📄 Exportar em Word (.docx)"}
+              </button>
+
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition"
+                className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
               >
                 Imprimir / PDF
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-3 border-t border-slate-100">
+          <div className="flex flex-col items-start justify-between gap-4 border-t border-slate-100 dark:border-slate-800 pt-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
-              <label htmlFor="versaoSelect" className="text-xs font-bold text-slate-600 uppercase">Versão Salva:</label>
+              <label
+                htmlFor="versaoSelect"
+                className="text-xs font-bold uppercase text-slate-600 dark:text-slate-400"
+              >
+                Versão Salva:
+              </label>
               <select
                 id="versaoSelect"
                 value={versaoSelecionadaId}
                 onChange={(e) => handleSelecionarVersao(e.target.value)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-800 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">-- Proposta Atual (Edição Livre) --</option>
                 {versoes.map((v) => (
                   <option key={v.id} value={v.id}>
-                    {v.nome_versao} - {formatBRL(v.valor_global)} ({new Date(v.created_at).toLocaleDateString("pt-BR")})
+                    {v.nome_versao} - {formatBRL(v.valor_global)} (
+                    {new Date(v.created_at).toLocaleDateString("pt-BR")})
                   </option>
                 ))}
               </select>
             </div>
-
-            <div className="flex items-center gap-3">
-              <label htmlFor="margemBdiInput" className="text-xs font-bold text-slate-600 uppercase">Margem / BDI (%):</label>
-              <input
-                id="margemBdiInput"
-                type="number"
-                step="0.01"
-                value={margemBdi}
-                onChange={(e) => handleMargemChange(Number(e.target.value))}
-                className="w-20 px-3 py-1.5 text-sm font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
           </div>
         </div>
 
-        {/* Documento Oficial da Proposta */}
-        <div className="rounded-2xl bg-white p-8 sm:p-12 shadow-sm border border-slate-200 print:border-none print:shadow-none space-y-8">
-          
-          <div className="border-b border-slate-200 pb-6 text-center space-y-2">
-            <h1 className="text-2xl font-bold uppercase tracking-wide text-slate-950">Proposta Comercial de Preços</h1>
-            <p className="text-sm text-slate-600">Ref. ao Processo Licitatório / Edital</p>
+        {/* Documento Oficial da Proposta - Estilo SEGURO */}
+        <div className="space-y-8 rounded-2xl border border-slate-200 bg-white p-8 text-slate-900 shadow-sm [color-scheme:light] sm:p-12 print:border-none print:shadow-none">
+          {/* Cabeçalho Oficial SEGURO */}
+          <div className="flex items-center justify-between border-b-2 border-yellow-500 pb-6">
+            <div>
+              <span className="text-xs font-extrabold uppercase tracking-widest text-slate-500">
+                Proposta Comercial & Técnica
+              </span>
+              <h1 className="text-3xl font-black uppercase tracking-wide text-slate-950 mt-1">
+                SEGURO
+              </h1>
+              <p className="text-xs font-semibold text-slate-600">
+                Soluções Personalizadas de Segurança, Tecnologia e Terceirização
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="inline-block rounded-lg bg-yellow-400 px-3 py-1 text-xs font-bold text-slate-950">
+                GPTW Certificada 2025
+              </span>
+              <p className="mt-1 text-[11px] text-slate-500">
+                Ref: Processo 01/2026[cite: 9]
+              </p>
+            </div>
           </div>
 
-          {/* Cabeçalho com dados da Empresa Proponente e do Órgão Licitante */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm bg-slate-50 print:bg-slate-50 p-6 rounded-xl border border-slate-100">
+          {/* Dados da Empresa Proponente e do Órgão Licitante */}
+          <div className="grid grid-cols-1 gap-6 rounded-xl border border-slate-100 bg-slate-50 p-6 text-sm md:grid-cols-2 print:bg-slate-50">
             <div>
-              <p className="text-xs font-bold text-slate-400 uppercase">Empresa Proponente</p>
-              <p className="font-bold text-slate-900 mt-1">{company?.razao_social || "Razão Social não informada"}</p>
-              <p className="text-xs text-slate-600">CNPJ: {company?.cnpj || "00.000.000/0000-00"}</p>
+              <p className="text-xs font-bold uppercase text-slate-400">
+                Empresa Proponente
+              </p>
+              <p className="mt-1 font-bold text-slate-900">
+                {company?.razao_social || "SEGURO SEGURANÇA LTDA"}[cite: 24]
+              </p>
+              <p className="text-xs text-slate-600">
+                CNPJ: {company?.cnpj || "17.036.171/0001-73"}
+              </p>
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-400 uppercase">Órgão Licitante (Cliente)</p>
-              <p className="font-bold text-slate-900 mt-1">{clientName}</p>
-              <p className="text-xs text-slate-600">Data Limite: {bid.deadline ? new Date(bid.deadline).toLocaleDateString("pt-BR") : "N/A"}</p>
+              <p className="text-xs font-bold uppercase text-slate-400">
+                Órgão Licitante (Cliente)
+              </p>
+              <p className="mt-1 font-bold text-slate-900">{clientName}</p>
+              <p className="text-xs text-slate-600">
+                Data Limite:{" "}
+                {bid.deadline
+                  ? new Date(bid.deadline).toLocaleDateString("pt-BR")
+                  : "N/A"}
+              </p>
             </div>
-            <div className="md:col-span-2 pt-2 border-t border-slate-200">
-              <p className="text-xs font-bold text-slate-400 uppercase">Objeto da Licitação</p>
+            <div className="border-t border-slate-200 pt-2 md:col-span-2">
+              <p className="text-xs font-bold uppercase text-slate-400">
+                Objeto da Licitação
+              </p>
               <input
                 type="text"
                 value={bid.title}
                 onChange={(e) => setBid({ ...bid, title: e.target.value })}
-                className="w-full mt-1 bg-transparent font-semibold text-slate-900 border-b border-dashed border-slate-300 focus:outline-none focus:border-blue-600 print:border-none"
+                className="mt-1 w-full border-b border-dashed border-slate-300 bg-transparent font-semibold text-slate-900 focus:border-blue-600 focus:outline-none print:border-none"
               />
             </div>
           </div>
 
-          <div className="text-sm text-slate-700 leading-relaxed space-y-4">
-            <p>À Comissão Permanente de Licitação,</p>
-            <p>
-              Apresentamos nossa proposta de preços para o fornecimento dos produtos e/ou execução dos serviços descritos no edital em epígrafe, cotados de acordo com o dimensionamento técnico e as exigências estabelecidas.
+          <div className="space-y-4 text-sm leading-relaxed text-slate-700">
+            <p className="font-bold text-slate-900">
+              À Comissão Permanente de Licitação,
             </p>
             <p>
-              O valor global estimado para a presente proposta, incluindo todos os custos diretos e indiretos, encargos sociais e tributos incidentes, é de:
+              Apresentamos nossa proposta comercial e técnica para a prestação
+              dos serviços especializados descritos no edital em epígrafe,
+              desenvolvida com base em rigorosos padrões de conformidade,
+              tecnologia integrada e excelência operacional.
             </p>
-            
-            <div className="p-5 bg-blue-50 border border-blue-100 rounded-xl text-center print:bg-slate-50">
-              <span className="text-xs text-blue-700 font-bold block uppercase tracking-wider">
-                Valor Global da Proposta {margemBdi > 0 ? `(Com ${margemBdi}% de BDI/Margem)` : ""}
+            <p>
+              O valor global estimado para a presente proposta, contemplando
+              todos os encargos diretos, indiretos e tributos incidentes, é
+              consolidado abaixo:
+            </p>
+
+            {/* Bloco de Destaque do Valor Global */}
+            <div className="rounded-xl border border-yellow-200 bg-yellow-50/60 p-6 text-center print:bg-slate-50">
+              <span className="block text-xs font-extrabold uppercase tracking-wider text-yellow-800">
+                Valor Global Consolidado da Proposta
               </span>
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <span className="text-2xl font-extrabold text-blue-950">R$</span>
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <span className="text-2xl font-extrabold text-slate-950">R$</span>
                 <input
                   type="number"
                   step="0.01"
                   value={valorGlobal}
                   onChange={(e) => setValorGlobal(e.target.value)}
-                  className="text-2xl font-extrabold text-blue-950 bg-white/80 px-4 py-1 rounded-lg text-center border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 shadow-inner print:border-none print:bg-transparent"
+                  className="w-64 rounded-lg border border-yellow-300 bg-white px-4 py-1 text-center text-2xl font-extrabold text-slate-950 shadow-inner focus:outline-none focus:ring-2 focus:ring-yellow-500 print:border-none print:bg-transparent"
                 />
               </div>
-              <span className="text-xs text-slate-500 mt-2 block font-medium">
-                Custo Base: {formatBRL(valorBase)} | Formatado Oficial: {formatBRL(valorGlobal)}
-              </span>
             </div>
           </div>
 
-          <div className="pt-8 border-t border-slate-200 space-y-8 text-sm">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6 border-t border-slate-200 pt-8 text-sm">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div>
-                <p className="font-bold text-slate-900">Condições de Pagamento:</p>
+                <p className="font-bold text-slate-900">
+                  Condições de Pagamento:
+                </p>
                 <input
                   type="text"
                   value={condicoesPagamento}
                   onChange={(e) => setCondicoesPagamento(e.target.value)}
-                  className="w-full mt-1 text-slate-600 bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-blue-600 print:border-none"
+                  className="mt-1 w-full border-b border-dashed border-slate-300 bg-transparent text-slate-600 focus:border-blue-600 focus:outline-none print:border-none"
                 />
               </div>
               <div>
-                <p className="font-bold text-slate-900">Validade da Proposta:</p>
+                <p className="font-bold text-slate-900">
+                  Validade da Proposta:
+                </p>
                 <input
                   type="text"
                   value={validadeProposta}
                   onChange={(e) => setValidadeProposta(e.target.value)}
-                  className="w-full mt-1 text-slate-600 bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-blue-600 print:border-none"
+                  className="mt-1 w-full border-b border-dashed border-slate-300 bg-transparent text-slate-600 focus:border-blue-600 focus:outline-none print:border-none"
                 />
               </div>
             </div>
 
-            {/* Rodapé com Assinatura do Responsável Legal */}
-            <div className="pt-12 text-center space-y-1">
-              <div className="w-64 mx-auto border-b border-slate-400 pb-1">
-                <p className="font-bold text-sm text-slate-900">{company?.nome_completo || "Responsável Legal"}</p>
+            {/* Rodapé e Assinatura */}
+            <div className="space-y-2 pt-12 text-center border-t border-slate-100">
+              <div className="mx-auto w-64 border-b border-slate-400 pb-1">
+                <p className="text-sm font-bold text-slate-900">
+                  {company?.nome_completo || "Flávia Dantas / Wagner Rocha"}[cite: 18, 62]
+                </p>
               </div>
-              <p className="font-semibold text-xs text-slate-700 mt-1">{company?.cargo || "Diretor Comercial"} — CPF: {company?.cpf || "000.000.000-00"}</p>
-              <p className="text-[11px] text-slate-400">Assinatura Digital / Carimbo da Empresa Proponente</p>
+              <p className="mt-1 text-xs font-semibold text-slate-700">
+                {company?.cargo || "Coordenação Comercial / Gestão Operacional"}{" "}
+                — CNPJ: {company?.cnpj || "17.036.171/0001-73"}[cite: 18, 24, 62]
+              </p>
+              <p className="text-[11px] font-medium text-yellow-700">
+                Felicidade é viver SEGURO — www.seguro.srv.br | 0800 123 2423[cite: 9]
+              </p>
             </div>
           </div>
-
         </div>
       </main>
     </div>

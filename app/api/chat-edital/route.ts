@@ -2,9 +2,46 @@ import { NextResponse } from "next/server";
 import { ChatOpenAI } from "@langchain/openai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { getTenantId, deductAiCredit } from "@/lib/tenant";
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            try {
+              cookieStore.set({ name, value, ...options });
+            } catch {}
+          },
+          remove(name: string, options: CookieOptions) {
+            try {
+              cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+            } catch {}
+          },
+        },
+      }
+    );
+
+    // Valida o tenant e consome 1 crédito de IA
+    const tenantId = await getTenantId(supabase);
+    const temCredito = tenantId ? await deductAiCredit(supabase, tenantId) : false;
+
+    if (!temCredito) {
+      return NextResponse.json(
+        { error: "Créditos de IA esgotados. Contacte o suporte ou recarregue a sua conta." },
+        { status: 403 }
+      );
+    }
+
     const { question, editalTitle, documentContext } = await request.json();
 
     if (!question) {

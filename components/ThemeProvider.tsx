@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 
 type Theme = "light" | "dark";
 
@@ -14,35 +20,42 @@ const ThemeContext = createContext<ThemeContextType>({
   toggleTheme: () => {},
 });
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  // Ler a preferência diretamente no estado inicial para evitar renderizações em cascata e chamadas no useEffect
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
-    const saved = localStorage.getItem("theme") as Theme | null;
-    if (saved === "dark" || saved === "light") return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+// A "fonte da verdade" é a classe "dark" na tag <html>.
+// O script do layout.tsx aplica essa classe antes do React carregar.
+function subscribe(callback: () => void) {
+  const observer = new MutationObserver(callback);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
   });
+  return () => observer.disconnect();
+}
 
-  // Atualizar a classe "dark" na raiz da página e no localStorage quando o tema mudar
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === "dark") {
-      root.classList.add("dark");
-    } else {
-      root.classList.remove("dark");
+function getSnapshot(): Theme {
+  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+}
+
+// No servidor não existe <html> do navegador: assume "light"
+function getServerSnapshot(): Theme {
+  return "light";
+}
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  const toggleTheme = useCallback(() => {
+    const next: Theme = getSnapshot() === "dark" ? "light" : "dark";
+    document.documentElement.classList.toggle("dark", next === "dark");
+    try {
+      localStorage.setItem("theme", next);
+    } catch {
+      // localStorage pode estar indisponível (modo privado, etc.)
     }
-    localStorage.setItem("theme", theme);
-  }, [theme]);
+  }, []);
 
-  function toggleTheme() {
-    setTheme((prev) => (prev === "light" ? "dark" : "light"));
-  }
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

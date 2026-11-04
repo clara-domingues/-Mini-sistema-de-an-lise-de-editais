@@ -24,7 +24,7 @@ export async function baixarDocx(md: string, nome: string) {
 
     if (!line.trim()) { i++; continue; }
 
-    // tabela markdown
+    // Tabela markdown
     if (line.trim().startsWith("|")) {
       const rows: string[][] = [];
       while (i < lines.length && lines[i].trim().startsWith("|")) {
@@ -35,6 +35,7 @@ export async function baixarDocx(md: string, nome: string) {
       children.push(
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
+          // Remove margens/espaçamento externo da tabela se necessário
           rows: rows.map(
             (r, ri) =>
               new TableRow({
@@ -42,8 +43,17 @@ export async function baixarDocx(md: string, nome: string) {
                 children: r.map(
                   (c) =>
                     new TableCell({
+                      // Remove ou reduz o espaçamento interno (padding) das células da tabela/BDI
+                      margins: {
+                        top: 60,    // Valor menor (padrão costuma ser maior)
+                        bottom: 60,
+                        left: 100,
+                        right: 100,
+                      },
                       children: [
                         new Paragraph({
+                          // Remove margens de espaçamento pós-parágrafo dentro da tabela
+                          spacing: { after: 0, before: 0 },
                           children: ri === 0 ? [new TextRun({ text: c, bold: true })] : runs(c),
                         }),
                       ],
@@ -53,7 +63,8 @@ export async function baixarDocx(md: string, nome: string) {
           ),
         })
       );
-      children.push(new Paragraph(""));
+      // Espaçamento reduzido após a tabela (era parágrafo vazio, agora controlamos via espaçamento ou reduzimos)
+      children.push(new Paragraph({ spacing: { after: 120 } }));
       continue;
     }
 
@@ -62,6 +73,7 @@ export async function baixarDocx(md: string, nome: string) {
         new Paragraph({
           heading: HeadingLevel.HEADING_1,
           alignment: AlignmentType.CENTER,
+          spacing: { after: 120, before: 120 },
           children: [new TextRun({ text: line.slice(2), bold: true })],
         })
       );
@@ -69,11 +81,18 @@ export async function baixarDocx(md: string, nome: string) {
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
+          spacing: { after: 100, before: 100 },
           children: [new TextRun({ text: line.slice(3), bold: true })],
         })
       );
     } else if (line.startsWith("- ")) {
-      children.push(new Paragraph({ bullet: { level: 0 }, children: runs(line.slice(2)) }));
+      children.push(
+        new Paragraph({ 
+          bullet: { level: 0 }, 
+          spacing: { after: 60 },
+          children: runs(line.slice(2)) 
+        })
+      );
     } else {
       children.push(new Paragraph({ spacing: { after: 120 }, children: runs(line) }));
     }

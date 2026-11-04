@@ -55,6 +55,9 @@ export default function ChatEditalModal({
 
       if (res.ok && data.answer) {
         setMessages((prev) => [...prev, { sender: "ai", text: data.answer }]);
+        
+        // 👉 Dispara o evento para atualizar os créditos instantaneamente na barra lateral
+        window.dispatchEvent(new Event("ai_credit_used"));
       } else {
         setMessages((prev) => [
           ...prev,
@@ -73,7 +76,7 @@ export default function ChatEditalModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-      <div className="flex h-150 w-full max-w-2xl flex-col rounded-2xl bg-white shadow-2xl overflow-hidden text-slate-900">
+      <div className="flex h-150 w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-transparent dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 bg-slate-950 px-6 py-4 text-white">
           <div className="flex items-center gap-3">
@@ -81,8 +84,10 @@ export default function ChatEditalModal({
               IA
             </div>
             <div>
-              <h3 className="font-bold text-sm leading-tight text-white">Assistente de Leitura de Edital</h3>
-              <p className="text-xs text-slate-400 truncate max-w-sm">{editalTitle}</p>
+              <h3 className="text-sm font-bold leading-tight text-white">
+                Assistente de Leitura de Edital
+              </h3>
+              <p className="max-w-sm truncate text-xs text-slate-400">{editalTitle}</p>
             </div>
           </div>
           <button
@@ -94,7 +99,7 @@ export default function ChatEditalModal({
         </div>
 
         {/* Mensagens */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
+        <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 dark:bg-slate-950 p-6">
           {messages.map((m, idx) => (
             <div
               key={idx}
@@ -103,8 +108,8 @@ export default function ChatEditalModal({
               <div
                 className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
                   m.sender === "user"
-                    ? "bg-blue-600 text-white rounded-br-none"
-                    : "bg-white border border-slate-200 text-slate-800 rounded-bl-none"
+                    ? "rounded-br-none bg-blue-600 text-white"
+                    : "rounded-bl-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100"
                 }`}
               >
                 <p className="whitespace-pre-wrap leading-relaxed">{m.text}</p>
@@ -114,18 +119,18 @@ export default function ChatEditalModal({
 
           {loading && (
             <div className="flex justify-start">
-              <div className="rounded-2xl rounded-bl-none bg-white border border-slate-200 px-4 py-3 text-sm text-slate-500 flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-blue-600 animate-bounce" />
-                <span className="h-2 w-2 rounded-full bg-blue-600 animate-bounce [animation-delay:0.2s]" />
-                <span className="h-2 w-2 rounded-full bg-blue-600 animate-bounce [animation-delay:0.4s]" />
-                <span>Lendo o edital com LangChain...</span>
+              <div className="flex items-center gap-2 rounded-2xl rounded-bl-none border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-600" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-600 [animation-delay:0.2s]" />
+                <span className="h-2 w-2 animate-bounce rounded-full bg-blue-600 [animation-delay:0.4s]" />
+                <span>Lendo o edital com IA...</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Input */}
-        <div className="border-t border-slate-200 bg-white p-4">
+        <div className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -138,7 +143,7 @@ export default function ChatEditalModal({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Pergunte algo sobre este edital (prazos, exigências, valores)..."
-              className="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+              className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-950"
             />
             <button
               type="submit"

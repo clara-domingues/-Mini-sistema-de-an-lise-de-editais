@@ -201,16 +201,16 @@ export default function ClientesPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-slate-100">
+    <div className="flex min-h-screen w-full bg-slate-100 dark:bg-slate-950 transition-colors">
       <Nav />
-      <main className="flex-1 w-full overflow-y-auto px-8 py-8 text-slate-900 lg:px-12">
+      <main className="flex-1 w-full overflow-y-auto px-8 py-8 text-slate-900 dark:text-slate-100 lg:px-12">
         <div className="w-full space-y-8">
           <header className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
                 Clientes & Órgãos
               </h1>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
                 Gerencie os órgãos públicos, empresas privadas e pessoas físicas parceiras.
               </p>
             </div>
@@ -228,19 +228,19 @@ export default function ClientesPage() {
           </header>
 
           {errorMsg && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            <div className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 p-4 text-sm text-red-800 dark:text-red-200">
               {errorMsg}
             </div>
           )}
 
           {loading ? (
-            <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 text-slate-500 shadow-sm">
+            <div className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 text-slate-500 dark:text-slate-400 shadow-sm">
               Carregando clientes...
             </div>
           ) : clients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center shadow-sm">
-              <h3 className="text-base font-bold text-slate-900">Nenhum cliente cadastrado</h3>
-              <p className="mt-1 text-sm text-slate-500">Cadastre seu primeiro cliente para começar a organizar as licitações.</p>
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center shadow-sm">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Nenhum cliente cadastrado</h3>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Cadastre seu primeiro cliente para começar a organizar as licitações.</p>
               <button
                 onClick={handleOpenCreateModal}
                 className="mt-6 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
@@ -251,26 +251,26 @@ export default function ClientesPage() {
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
               {clients.map((c) => (
-                <div key={c.id} className="group relative rounded-2xl border border-slate-200/90 bg-white p-5 shadow-sm space-y-3 transition hover:border-blue-300 hover:shadow-md">
+                <div key={c.id} className="group relative rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-3 transition hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-md">
                   <div className="flex justify-between items-start">
-                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                    <span className="rounded-full bg-blue-50 dark:bg-blue-950 px-2.5 py-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300">
                       {c.type || "Geral"}
                     </span>
                     <span className="text-xs font-mono text-slate-400">{c.doc_type || "CNPJ"}: {c.document || "Não informado"}</span>
                   </div>
 
                   <div>
-                    <h3 className="font-bold text-slate-900 text-base">{c.name}</h3>
-                    <p className="text-xs text-slate-500 mt-0.5">{c.city || "Cidade não informada"} {c.sector ? `• ${c.sector}` : ""}</p>
+                    <h3 className="font-bold text-slate-900 dark:text-white text-base">{c.name}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{c.city || "Cidade não informada"} {c.sector ? `• ${c.sector}` : ""}</p>
                     {c.address && (
                       <p className="text-xs text-slate-400 mt-1 truncate">{c.address}</p>
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2">
                     <button
                       onClick={() => handleOpenEditModal(c)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 px-3 py-1.5 rounded-lg transition"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-950/50 px-3 py-1.5 rounded-lg transition"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 20h9" />
@@ -281,7 +281,7 @@ export default function ClientesPage() {
                     <button
                       onClick={() => handleDeleteClient(c.id)}
                       disabled={deletingId === c.id}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-red-600 bg-slate-50 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-red-600 bg-slate-50 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/50 px-2.5 py-1.5 rounded-lg transition disabled:opacity-50"
                       title="Excluir cliente"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -298,14 +298,14 @@ export default function ClientesPage() {
           {/* Modal de Cadastro / Edição de Cliente */}
           {modalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4">
-              <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl space-y-6 text-slate-900">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <h2 className="text-lg font-bold text-slate-900">
+              <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-6 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                     {editingClient ? "Editar cliente / órgão" : "Cadastrar novo cliente"}
                   </h2>
                   <button
                     onClick={() => setModalOpen(false)}
-                    className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
                   >
                     ✕
                   </button>
@@ -313,33 +313,33 @@ export default function ClientesPage() {
 
                 <form onSubmit={handleSaveClient} className="space-y-4">
                   <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600">Nome / Órgão *</label>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Nome / Órgão *</label>
                     <input
                       type="text"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ex: Prefeitura Municipal de Fortaleza"
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-white"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <div className="flex justify-between items-center mb-1">
-                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Documento</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Documento</label>
                         <div className="flex gap-1.5 text-xs">
                           <button
                             type="button"
                             onClick={() => { setDocType("CNPJ"); setDocument(""); }}
-                            className={`px-2 py-0.5 rounded font-bold transition-colors ${docType === "CNPJ" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                            className={`px-2 py-0.5 rounded font-bold transition-colors ${docType === "CNPJ" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"}`}
                           >
                             CNPJ
                           </button>
                           <button
                             type="button"
                             onClick={() => { setDocType("CPF"); setDocument(""); }}
-                            className={`px-2 py-0.5 rounded font-bold transition-colors ${docType === "CPF" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                            className={`px-2 py-0.5 rounded font-bold transition-colors ${docType === "CPF" ? "bg-blue-600 text-white" : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200"}`}
                           >
                             CPF
                           </button>
@@ -350,16 +350,16 @@ export default function ClientesPage() {
                         value={document}
                         onChange={(e) => setDocument(e.target.value)}
                         placeholder={docType === "CNPJ" ? "00.000.000/0000-00" : "000.000.000-00"}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-white"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600">Tipo</label>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Tipo</label>
                       <select
                         value={clientType}
                         onChange={(e) => setClientType(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-white"
                       >
                         <option value="Público">Público</option>
                         <option value="Privado">Privado</option>
@@ -370,22 +370,22 @@ export default function ClientesPage() {
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600">Cidade</label>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Cidade</label>
                       <input
                         type="text"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         placeholder="Ex: Fortaleza - CE"
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-white"
                       />
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600">Ramo / Setor</label>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Ramo / Setor</label>
                       <select
                         value={sector}
                         onChange={(e) => setSector(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                        className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-white"
                       >
                         <option value="">Selecione o setor...</option>
                         {SECTORS_LIST.map((s) => (
@@ -396,30 +396,30 @@ export default function ClientesPage() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600">Endereço</label>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">Endereço</label>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="Endereço completo"
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-white"
                     />
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <button
                       type="button"
                       onClick={() => setModalOpen(false)}
-                      className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                      className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={saving}
-                      className="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                      className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50"
                     >
-                      {saving ? "Salvando..." : editingClient ? "Atualizar cliente" : "Salvar cliente"}
+                      {saving ? "Salvando..." : "Salvar cliente"}
                     </button>
                   </div>
                 </form>

@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useTheme } from "@/components/ThemeProvider";
+import { getTenantId } from "@/lib/tenant";
 
 type NotificationItem = {
   id: string;
@@ -17,28 +19,28 @@ type NotificationItem = {
 
 export default function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
   const supabase = createClient();
+  const { theme, toggleTheme } = useTheme();
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
 
-  // Carregar notificações da API de Notificações
+  // Carregar notificações e créditos de IA em tempo real com suporte a eventos
   useEffect(() => {
-    async function fetchNotifications() {
+    async function fetchData() {
       try {
         setLoading(true);
         const res = await fetch("/api/notificacoes");
         const contentType = res.headers.get("content-type");
-        if (!contentType || !contentType.includes("application/json")) {
-          setNotifications([]);
-          return;
-        }
-
-        const data = await res.json();
-        if (data.success && data.notifications) {
-          setNotifications(data.notifications);
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          if (data.success && data.notifications) {
+            setNotifications(data.notifications);
+          }
         }
       } catch (err) {
         console.error("Erro ao carregar notificações:", err);
@@ -47,8 +49,39 @@ export default function Nav() {
       }
     }
 
-    void fetchNotifications();
-  }, []);
+    async function loadCredits() {
+      try {
+        const tenantId = await getTenantId(supabase);
+        if (!tenantId) return;
+
+        const { data } = await supabase
+          .from("tenant_ai_credits")
+          .select("credits_balance")
+          .eq("tenant_id", tenantId)
+          .single();
+
+        if (data) {
+          setCredits(data.credits_balance);
+        }
+      } catch (err) {
+        console.error("Erro ao carregar créditos de IA:", err);
+      }
+    }
+
+    void fetchData();
+    void loadCredits();
+
+    // 👉 Ouve o evento disparado pelo modal de chat para atualizar o saldo na hora
+    const handleCreditUsed = () => {
+      void loadCredits();
+    };
+
+    window.addEventListener("ai_credit_used", handleCreditUsed);
+
+    return () => {
+      window.removeEventListener("ai_credit_used", handleCreditUsed);
+    };
+  }, [supabase]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -65,13 +98,19 @@ export default function Nav() {
     }
   };
 
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
+
   const unreadCount = notifications.filter((n) => !n.read).length;
   const isActive = (path: string) =>
     path === "/" ? pathname === "/" : pathname === path || pathname.startsWith(path + "/");
 
   return (
     <aside
-      className={`bg-[#0B132B] text-slate-300 flex flex-col justify-between shrink-0 h-screen sticky top-0 transition-all duration-300 ${
+      className={`bg-[#0B132B] dark:bg-slate-950 border-r border-transparent dark:border-slate-800 text-slate-300 flex flex-col justify-between transition-all duration-300 ${
         collapsed ? "w-20" : "w-64"
       }`}
     >
@@ -111,6 +150,25 @@ export default function Nav() {
           </button>
         </div>
 
+        {/* WIDGET DE CRÉDITOS DE IA NA BARRA LATERAL */}
+        <div className="px-2">
+          <div className={`flex items-center ${collapsed ? "justify-center p-2" : "gap-3 p-3"} rounded-xl border border-purple-900/60 bg-purple-950/40 text-purple-300`}>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-purple-600 text-xs font-bold text-white shadow-sm">
+              IA
+            </span>
+            {!collapsed && (
+              <div className="overflow-hidden">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-purple-400">
+                  Créditos IA
+                </p>
+                <p className="text-sm font-extrabold text-white truncate">
+                  {credits !== null ? credits.toFixed(0) : "—"}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* SINO DE NOTIFICAÇÕES */}
         <div className="relative px-2">
           <button
@@ -139,12 +197,12 @@ export default function Nav() {
 
           {/* DROPDOWN DE NOTIFICAÇÕES */}
           {showDropdown && (
-            <div className="absolute left-full top-0 ml-3 w-80 bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-200 z-50 p-4 space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700">
+            <div className="absolute left-full top-0 ml-3 w-80 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Notificações & Alertas
                 </h3>
-                <span className="text-[10px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-full">
+                <span className="text-[10px] bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-semibold px-2 py-0.5 rounded-full">
                   {unreadCount} pendentes
                 </span>
               </div>
@@ -159,11 +217,11 @@ export default function Nav() {
                       onClick={() => void markAsRead(n.id)}
                       className={`p-3 rounded-xl border text-xs cursor-pointer transition ${
                         n.read
-                          ? "bg-slate-50 border-slate-100 text-slate-500"
-                          : "bg-blue-50/60 border-blue-100 text-slate-800 font-medium"
+                          ? "bg-slate-50 dark:bg-slate-800/50 border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400"
+                          : "bg-blue-50/60 dark:bg-blue-950/40 border-blue-100 dark:border-blue-900 text-slate-800 dark:text-slate-200 font-medium"
                       }`}
                     >
-                      <p className="font-bold text-slate-900">{n.title}</p>
+                      <p className="font-bold text-slate-900 dark:text-white">{n.title}</p>
                       <p className="mt-0.5 text-[11px] leading-tight">{n.message}</p>
                       <span className="mt-1 block text-[9px] text-slate-400">
                         {new Date(n.created_at).toLocaleDateString("pt-BR")}
@@ -188,7 +246,6 @@ export default function Nav() {
             </p>
           )}
 
-          {/* LINK DE VISÃO GERAL APONTANDO PARA A ROTA RAIZ '/' */}
           <Link
             href="/"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
@@ -249,46 +306,80 @@ export default function Nav() {
             {!collapsed && <span>Catálogo</span>}
           </Link>
         </nav>
+      </div>
 
-        {/* SECÇÃO DE CONTA */}
-        <div className="space-y-1 pt-4 border-t border-slate-800">
-          {!collapsed && (
-            <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-              Conta
-            </p>
+      {/* SECÇÃO DE CONTA & MODO ESCURO/CLARO */}
+      <div className="p-4 space-y-1 border-t border-slate-800">
+        {!collapsed && (
+          <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+            Conta
+          </p>
+        )}
+
+        <Link
+          href="/perfil"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
+            isActive("/perfil")
+              ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+              : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+          }`}
+          title="Empresa"
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0V5" />
+          </svg>
+          {!collapsed && <span>Empresa</span>}
+        </Link>
+
+        <Link
+          href="/configuracoes"
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
+            isActive("/configuracoes")
+              ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
+              : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+          }`}
+          title="Configurações Pessoais"
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          {!collapsed && <span>Configurações Pessoais</span>}
+        </Link>
+
+        {/* Botão de Alternância de Tema (Dark/Light Mode) */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800/60 transition"
+          title={theme === "dark" ? "Mudar para Modo Claro" : "Mudar para Modo Escuro"}
+        >
+          {theme === "dark" ? (
+            <svg className="w-4 h-4 shrink-0 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          ) : (
+            <svg className="w-4 h-4 shrink-0 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
           )}
+          {!collapsed && (
+            <span>{theme === "dark" ? "Modo Claro" : "Modo Escuro"}</span>
+          )}
+        </button>
 
-          <Link
-            href="/perfil"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
-              isActive("/perfil")
-                ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-            }`}
-            title="Empresa"
-          >
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0V5" />
-            </svg>
-            {!collapsed && <span>Empresa</span>}
-          </Link>
-
-          <Link
-            href="/configuracoes"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${
-              isActive("/configuracoes")
-                ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
-                : "text-slate-400 hover:text-white hover:bg-slate-800/60"
-            }`}
-            title="Configurações Pessoais"
-          >
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {!collapsed && <span>Configurações Pessoais</span>}
-          </Link>
-        </div>
+        {/* Botão de Sair da Conta */}
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold text-red-400 hover:text-white hover:bg-red-600/20 transition"
+          title="Sair da Conta"
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          {!collapsed && <span>Sair da Conta</span>}
+        </button>
       </div>
     </aside>
   );

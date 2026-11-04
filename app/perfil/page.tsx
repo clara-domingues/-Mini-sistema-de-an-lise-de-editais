@@ -5,6 +5,21 @@ import Nav from "@/components/Nav";
 import { createClient } from "@/lib/supabase/client";
 import { SECTOR_OPTIONS } from "@/lib/sectors";
 
+const inputClass =
+  "w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-600";
+
+const labelClass =
+  "mb-1 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400";
+
+const cardClass =
+  "rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm transition-colors";
+
+const iconBoxClass =
+  "rounded-xl bg-blue-50 dark:bg-blue-950 p-2 text-blue-600 dark:text-blue-400";
+
+const cardHeaderClass =
+  "flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3";
+
 export default function PerfilEmpresaPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -21,7 +36,7 @@ export default function PerfilEmpresaPage() {
   const [respRole, setRespRole] = useState("");
   const [minValue, setMinValue] = useState("");
   const [maxValue, setMaxValue] = useState("");
-  
+
   // Estado para os setores selecionados
   const [selectedSectors, setSelectedSectors] = useState<string[]>([]);
 
@@ -31,7 +46,9 @@ export default function PerfilEmpresaPage() {
   useEffect(() => {
     async function loadPerfil() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
         if (!user) return;
 
         const { data, error } = await supabase
@@ -77,7 +94,9 @@ export default function PerfilEmpresaPage() {
     setSuccessMsg("");
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("Utilizador não autenticado.");
       }
@@ -114,198 +133,192 @@ export default function PerfilEmpresaPage() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
       <Nav />
       <main className="flex-1 overflow-y-auto px-8 py-8 lg:px-12">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="mx-auto max-w-4xl space-y-8">
+          <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Configurações da empresa</h1>
-              <p className="text-sm text-slate-500">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                Configurações da empresa
+              </h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Cadastro, dados bancários, responsável legal e interesses comerciais para a IA.
               </p>
             </div>
-            <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full text-xs font-semibold border border-emerald-200 self-start">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <div className="flex items-center gap-2 self-start rounded-full border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/50 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500"></span>
               Ambiente Operacional
             </div>
           </header>
 
           {successMsg && (
-            <div className="p-4 bg-emerald-50 text-emerald-700 rounded-xl text-sm border border-emerald-200">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/50 p-4 text-sm text-emerald-700 dark:text-emerald-300">
               {successMsg}
             </div>
           )}
           {errorMsg && (
-            <div className="p-4 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200">
+            <div
+              role="alert"
+              className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 p-4 text-sm text-red-700 dark:text-red-300"
+            >
               {errorMsg}
             </div>
           )}
 
           <form onSubmit={handleSave} className="space-y-6">
             {/* Grid Superior: Dados da Empresa & Dados Bancários */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Dados da empresa */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`${cardClass} space-y-4`}>
+                <div className={cardHeaderClass}>
+                  <div className={iconBoxClass}>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m0 0h4m-4 0V11m0 0V5" />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900">Dados da empresa</h3>
-                    <p className="text-xs text-slate-500">Informações de identificação da empresa.</p>
+                    <h3 className="font-bold text-slate-900 dark:text-white">Dados da empresa</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Informações de identificação da empresa.
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                      Razão social *
-                    </label>
+                    <label className={labelClass}>Razão social *</label>
                     <input
                       type="text"
                       required
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       placeholder="Nome registrado da empresa"
-                      className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                      CNPJ
-                    </label>
+                    <label className={labelClass}>CNPJ</label>
                     <input
                       type="text"
                       value={cnpj}
                       onChange={(e) => setCnpj(e.target.value)}
                       placeholder="00.000.000/0000-00"
-                      className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                      className={inputClass}
                     />
                   </div>
                 </div>
               </div>
 
               {/* Dados bancários */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                  <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`${cardClass} space-y-4`}>
+                <div className={cardHeaderClass}>
+                  <div className={iconBoxClass}>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900">Dados bancários</h3>
-                    <p className="text-xs text-slate-500">Informações bancárias utilizadas nas propostas.</p>
+                    <h3 className="font-bold text-slate-900 dark:text-white">Dados bancários</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Informações bancárias utilizadas nas propostas.
+                    </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                      Banco
-                    </label>
+                    <label className={labelClass}>Banco</label>
                     <input
                       type="text"
                       value={bankName}
                       onChange={(e) => setBankName(e.target.value)}
                       placeholder="Nome do banco"
-                      className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                      className={inputClass}
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                      Agência
-                    </label>
+                    <label className={labelClass}>Agência</label>
                     <input
                       type="text"
                       value={bankAgency}
                       onChange={(e) => setBankAgency(e.target.value)}
                       placeholder="Agência"
-                      className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                      className={inputClass}
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Conta
-                  </label>
+                  <label className={labelClass}>Conta</label>
                   <input
                     type="text"
                     value={bankAccount}
                     onChange={(e) => setBankAccount(e.target.value)}
                     placeholder="Número da conta"
-                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={inputClass}
                   />
                 </div>
               </div>
             </div>
 
             {/* Responsável legal */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
-                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className={`${cardClass} space-y-4`}>
+              <div className={cardHeaderClass}>
+                <div className={iconBoxClass}>
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-900">Responsável legal</h3>
-                  <p className="text-xs text-slate-500">Dados da pessoa responsável pela empresa.</p>
+                  <h3 className="font-bold text-slate-900 dark:text-white">Responsável legal</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Dados da pessoa responsável pela empresa.
+                  </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Nome completo
-                  </label>
+                  <label className={labelClass}>Nome completo</label>
                   <input
                     type="text"
                     value={respName}
                     onChange={(e) => setRespName(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    CPF
-                  </label>
+                  <label className={labelClass}>CPF</label>
                   <input
                     type="text"
                     value={respCpf}
                     onChange={(e) => setRespCpf(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Cargo
-                  </label>
+                  <label className={labelClass}>Cargo</label>
                   <input
                     type="text"
                     value={respRole}
                     onChange={(e) => setRespRole(e.target.value)}
-                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={inputClass}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Interesses da empresa (Com Ramos/Setores clicáveis) */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-5">
-              <div className="border-b border-slate-100 pb-3">
-                <h3 className="font-bold text-slate-900">Interesses da empresa</h3>
-                <p className="text-xs text-slate-500">
+            {/* Interesses da empresa */}
+            <div className={`${cardClass} space-y-5`}>
+              <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 className="font-bold text-slate-900 dark:text-white">Interesses da empresa</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Clique nos setores e defina faixas de valores para a IA priorizar oportunidades.
                 </p>
               </div>
 
-              {/* Ramos / Setores Clicáveis */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
                   Ramos / Setores (Clique para selecionar)
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -316,10 +329,10 @@ export default function PerfilEmpresaPage() {
                         type="button"
                         key={sector}
                         onClick={() => toggleSector(sector)}
-                        className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 border ${
+                        className={`rounded-xl border px-3.5 py-2 text-xs font-medium transition-all duration-150 ${
                           isSelected
-                            ? "bg-blue-600 text-white border-blue-600 shadow-sm scale-105"
-                            : "bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200/80"
+                            ? "scale-105 border-blue-600 bg-blue-600 text-white shadow-sm"
+                            : "border-slate-200/80 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                         }`}
                       >
                         {sector} {isSelected && " ✓"}
@@ -329,30 +342,25 @@ export default function PerfilEmpresaPage() {
                 </div>
               </div>
 
-              {/* Faixa de Valor do Edital (Mínimo e Máximo) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              <div className="grid grid-cols-1 gap-4 border-t border-slate-100 dark:border-slate-800 pt-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Valor mínimo do edital (R$)
-                  </label>
+                  <label className={labelClass}>Valor mínimo do edital (R$)</label>
                   <input
                     type="text"
                     value={minValue}
                     onChange={(e) => setMinValue(e.target.value)}
                     placeholder="R$ 0,00"
-                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                    Valor máximo do edital (R$)
-                  </label>
+                  <label className={labelClass}>Valor máximo do edital (R$)</label>
                   <input
                     type="text"
                     value={maxValue}
                     onChange={(e) => setMaxValue(e.target.value)}
                     placeholder="R$ 0,00"
-                    className="w-full border border-slate-300 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                    className={inputClass}
                   />
                 </div>
               </div>
@@ -362,7 +370,7 @@ export default function PerfilEmpresaPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-xl text-sm transition-colors shadow-sm"
+                className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
               >
                 {loading ? "A guardar..." : "Guardar alterações"}
               </button>

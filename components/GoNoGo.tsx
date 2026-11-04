@@ -88,10 +88,7 @@ export default function GoNoGo({
   }, [atendidos, total]);
 
   const categorias = useMemo(
-    () =>
-      Array.from(
-        new Set(items.map((item) => item.categoria))
-      ),
+    () => Array.from(new Set(items.map((item) => item.categoria))),
     [items]
   );
 
@@ -129,11 +126,13 @@ export default function GoNoGo({
       const data = await res.json();
 
       if (data.success && data.requisitos && data.requisitos.length > 0) {
-        const novosItens: CheckItem[] = data.requisitos.map((r: { categoria: string; descricao: string; atendido: boolean }) => ({
-          categoria: r.categoria,
-          texto: r.descricao,
-          ok: r.atendido ?? false,
-        }));
+        const novosItens: CheckItem[] = data.requisitos.map(
+          (r: { categoria: string; descricao: string; atendido: boolean }) => ({
+            categoria: r.categoria,
+            texto: r.descricao,
+            ok: r.atendido ?? false,
+          })
+        );
 
         setItems(novosItens);
 
@@ -184,9 +183,7 @@ export default function GoNoGo({
     if (error) {
       setItems(previousItems);
       setErr(
-        `Não foi possível salvar esta alteração: ${getErrorMessage(
-          error
-        )}`
+        `Não foi possível salvar esta alteração: ${getErrorMessage(error)}`
       );
     } else {
       setSavedMessage("Checklist atualizado.");
@@ -195,7 +192,7 @@ export default function GoNoGo({
     setSavingItem(null);
   }
 
-  // CORRIGIDO: Tentativa com valor em caixa alta, caixa baixa e fallback de coluna 'decision'
+  // Tentativa com valor em caixa alta, caixa baixa e fallback de coluna 'decision'
   async function decidir(nextDecision: "go" | "no_go") {
     if (savingItem !== null || savingDecision !== null) {
       return;
@@ -238,9 +235,7 @@ export default function GoNoGo({
     if (error) {
       setDecision(previousDecision);
       setErr(
-        `Não foi possível salvar sua decisão: ${getErrorMessage(
-          error
-        )}`
+        `Não foi possível salvar sua decisão: ${getErrorMessage(error)}`
       );
     } else {
       setSavedMessage(
@@ -259,38 +254,38 @@ export default function GoNoGo({
       <div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600">
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               Decisão de participação
             </p>
 
-            <h2 className="mt-1 text-xl font-bold text-slate-900">
+            <h2 className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
               Análise Go / No-Go
             </h2>
 
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              Marque as exigências que sua empresa já possui ou
-              atende. Use esse checklist como apoio à decisão e
-              confirme os documentos no edital original.
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+              Marque as exigências que sua empresa já possui ou atende. Use esse
+              checklist como apoio à decisão e confirme os documentos no edital
+              original.
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex shrink-0 items-center gap-3">
             <button
               type="button"
               onClick={() => void extrairComIA()}
               disabled={loadingAI}
-              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition disabled:opacity-50"
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-xs transition hover:bg-blue-700 disabled:opacity-50"
             >
               {loadingAI ? "Extraindo com IA..." : "🤖 Extrair Requisitos com IA"}
             </button>
 
             {total > 0 && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-center">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-2 text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Aderência
                 </p>
 
-                <p className="mt-1 text-xl font-bold text-slate-900">
+                <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">
                   {percentual}%
                 </p>
               </div>
@@ -302,30 +297,30 @@ export default function GoNoGo({
       {/* RESUMO */}
       {total > 0 && (
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Total
             </p>
 
-            <p className="mt-1 text-2xl font-bold text-slate-900">
+            <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
               {total}
             </p>
 
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               exigência(s)
             </p>
           </div>
 
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
+          <div className="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
               Atendidas
             </p>
 
-            <p className="mt-1 text-2xl font-bold text-emerald-800">
+            <p className="mt-1 text-2xl font-bold text-emerald-800 dark:text-emerald-200">
               {atendidos}
             </p>
 
-            <p className="mt-1 text-xs text-emerald-700">
+            <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
               requisito(s) confirmado(s)
             </p>
           </div>
@@ -333,15 +328,15 @@ export default function GoNoGo({
           <div
             className={`rounded-xl border p-4 ${
               pendentes > 0
-                ? "border-amber-200 bg-amber-50"
-                : "border-emerald-200 bg-emerald-50"
+                ? "border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40"
+                : "border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/40"
             }`}
           >
             <p
               className={`text-xs font-semibold uppercase tracking-wider ${
                 pendentes > 0
-                  ? "text-amber-700"
-                  : "text-emerald-700"
+                  ? "text-amber-700 dark:text-amber-300"
+                  : "text-emerald-700 dark:text-emerald-300"
               }`}
             >
               Pendentes
@@ -350,8 +345,8 @@ export default function GoNoGo({
             <p
               className={`mt-1 text-2xl font-bold ${
                 pendentes > 0
-                  ? "text-amber-800"
-                  : "text-emerald-800"
+                  ? "text-amber-800 dark:text-amber-200"
+                  : "text-emerald-800 dark:text-emerald-200"
               }`}
             >
               {pendentes}
@@ -360,8 +355,8 @@ export default function GoNoGo({
             <p
               className={`mt-1 text-xs ${
                 pendentes > 0
-                  ? "text-amber-700"
-                  : "text-emerald-700"
+                  ? "text-amber-700 dark:text-amber-300"
+                  : "text-emerald-700 dark:text-emerald-300"
               }`}
             >
               requisito(s) a verificar
@@ -372,19 +367,19 @@ export default function GoNoGo({
 
       {/* BARRA DE PROGRESSO */}
       {total > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
           <div className="mb-2 flex items-center justify-between gap-3">
-            <span className="text-sm font-semibold text-slate-700">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
               Progresso da conferência
             </span>
 
-            <span className="text-sm font-bold text-slate-900">
+            <span className="text-sm font-bold text-slate-900 dark:text-white">
               {atendidos}/{total}
             </span>
           </div>
 
           <div
-            className="h-3 overflow-hidden rounded-full bg-slate-100"
+            className="h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
             role="progressbar"
             aria-valuenow={percentual}
             aria-valuemin={0}
@@ -405,7 +400,7 @@ export default function GoNoGo({
             />
           </div>
 
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
             {percentual === 100
               ? "Todas as exigências marcadas como atendidas."
               : `${pendentes} exigência(s) ainda precisam ser verificadas.`}
@@ -415,8 +410,8 @@ export default function GoNoGo({
 
       {/* RESUMO POR CATEGORIA */}
       {resumoCategorias.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4">
-          <h3 className="text-sm font-semibold text-slate-900">
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
             Resumo por categoria
           </h3>
 
@@ -424,14 +419,14 @@ export default function GoNoGo({
             {resumoCategorias.map((categoria) => (
               <div
                 key={categoria.categoria}
-                className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-3"
+                className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-3 py-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-800">
+                  <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
                     {categoria.categoria}
                   </p>
 
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                     {categoria.atendidos} de {categoria.total} atendidos
                   </p>
                 </div>
@@ -439,8 +434,8 @@ export default function GoNoGo({
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
                     categoria.pendentes === 0
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-amber-100 text-amber-800"
+                      ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                      : "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
                   }`}
                 >
                   {categoria.pendentes === 0
@@ -455,19 +450,21 @@ export default function GoNoGo({
 
       {/* ALERTA SEM REQUISITOS */}
       {items.length === 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 p-4">
           <div className="flex gap-3">
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-bold text-amber-800">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900 text-sm font-bold text-amber-800 dark:text-amber-200">
               !
             </span>
 
             <div>
-              <h3 className="text-sm font-semibold text-amber-900">
+              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
                 Nenhuma exigência de habilitação foi extraída
               </h3>
 
-              <p className="mt-1 text-sm leading-6 text-amber-800">
-                A análise automática ainda não encontrou requisitos estruturados de habilitação para este edital. Clique no botão de IA no topo para realizar a extração.
+              <p className="mt-1 text-sm leading-6 text-amber-800 dark:text-amber-300">
+                A análise automática ainda não encontrou requisitos estruturados
+                de habilitação para este edital. Clique no botão de IA no topo
+                para realizar a extração.
               </p>
             </div>
           </div>
@@ -490,15 +487,15 @@ export default function GoNoGo({
         return (
           <div
             key={categoria}
-            className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+            className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
           >
-            <div className="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   {categoria}
                 </h3>
 
-                <p className="mt-0.5 text-xs text-slate-500">
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   {categoryCompleted} de {categoryItems.length} atendidos
                 </p>
               </div>
@@ -506,8 +503,8 @@ export default function GoNoGo({
               <span
                 className={`w-fit rounded-full px-2.5 py-1 text-xs font-semibold ${
                   categoryCompleted === categoryItems.length
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-amber-100 text-amber-800"
+                    ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300"
+                    : "bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300"
                 }`}
               >
                 {categoryCompleted === categoryItems.length
@@ -516,7 +513,7 @@ export default function GoNoGo({
               </span>
             </div>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {categoryItems.map(({ item, index }) => {
                 const isSaving = savingItem === index;
 
@@ -525,8 +522,8 @@ export default function GoNoGo({
                     key={`${categoria}-${index}`}
                     className={`flex cursor-pointer items-start gap-3 px-4 py-4 transition ${
                       isSaving
-                        ? "bg-blue-50/50"
-                        : "hover:bg-slate-50"
+                        ? "bg-blue-50/50 dark:bg-blue-950/30"
+                        : "hover:bg-slate-50 dark:hover:bg-slate-800/50"
                     }`}
                   >
                     <input
@@ -534,25 +531,24 @@ export default function GoNoGo({
                       checked={item.ok}
                       onChange={() => void toggle(index)}
                       disabled={
-                        savingItem !== null ||
-                        savingDecision !== null
+                        savingItem !== null || savingDecision !== null
                       }
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="mt-1 h-4 w-4 rounded border-slate-300 dark:border-slate-600 dark:bg-slate-800 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                     />
 
                     <span className="min-w-0 flex-1">
                       <span
                         className={`block text-sm leading-6 ${
                           item.ok
-                            ? "text-slate-400 line-through"
-                            : "text-slate-800"
+                            ? "text-slate-400 dark:text-slate-500 line-through"
+                            : "text-slate-800 dark:text-slate-200"
                         }`}
                       >
                         {item.texto}
                       </span>
 
                       {isSaving && (
-                        <span className="mt-1 block text-xs font-medium text-blue-600">
+                        <span className="mt-1 block text-xs font-medium text-blue-600 dark:text-blue-400">
                           Salvando...
                         </span>
                       )}
@@ -560,7 +556,7 @@ export default function GoNoGo({
 
                     {item.ok && (
                       <span
-                        className="shrink-0 text-sm font-bold text-emerald-600"
+                        className="shrink-0 text-sm font-bold text-emerald-600 dark:text-emerald-400"
                         aria-label="Requisito atendido"
                       >
                         ✓
@@ -575,15 +571,14 @@ export default function GoNoGo({
       })}
 
       {/* DECISÃO */}
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-4 sm:p-5">
         <div>
-          <h3 className="text-sm font-bold text-slate-900">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
             Decisão final
           </h3>
 
-          <p className="mt-1 text-sm leading-6 text-slate-500">
-            Registre aqui a decisão da empresa após revisar os
-            requisitos.
+          <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+            Registre aqui a decisão da empresa após revisar os requisitos.
           </p>
         </div>
 
@@ -591,32 +586,26 @@ export default function GoNoGo({
           <button
             type="button"
             onClick={() => void decidir("go")}
-            disabled={
-              savingItem !== null || savingDecision !== null
-            }
+            disabled={savingItem !== null || savingDecision !== null}
             aria-pressed={decision === "go"}
             className={`min-h-12 rounded-xl border px-4 py-3 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
               decision === "go"
                 ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
-                : "border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50"
+                : "border-emerald-300 dark:border-emerald-800 bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
             }`}
           >
-            {savingDecision === "go"
-              ? "Salvando..."
-              : "✓ GO — Participar"}
+            {savingDecision === "go" ? "Salvando..." : "✓ GO — Participar"}
           </button>
 
           <button
             type="button"
             onClick={() => void decidir("no_go")}
-            disabled={
-              savingItem !== null || savingDecision !== null
-            }
+            disabled={savingItem !== null || savingDecision !== null}
             aria-pressed={decision === "no_go"}
             className={`min-h-12 rounded-xl border px-4 py-3 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
               decision === "no_go"
                 ? "border-red-600 bg-red-600 text-white shadow-sm"
-                : "border-red-300 bg-white text-red-700 hover:bg-red-50"
+                : "border-red-300 dark:border-red-900 bg-white dark:bg-slate-800 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/40"
             }`}
           >
             {savingDecision === "no_go"
@@ -626,21 +615,21 @@ export default function GoNoGo({
         </div>
 
         {decision === "go" && (
-          <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <div className="mt-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-950/40 p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm font-semibold text-blue-900">
+                <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
                   Participação registrada como GO
                 </p>
 
-                <p className="mt-1 text-xs leading-5 text-blue-800">
+                <p className="mt-1 text-xs leading-5 text-blue-800 dark:text-blue-300">
                   Você pode seguir para a preparação da proposta.
                 </p>
               </div>
 
               <Link
                 href={`/editais/${bidId}/proposta`}
-                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900"
               >
                 Montar proposta →
               </Link>
@@ -649,14 +638,14 @@ export default function GoNoGo({
         )}
 
         {decision === "no_go" && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
-            <p className="text-sm font-semibold text-red-900">
+          <div className="mt-4 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-4">
+            <p className="text-sm font-semibold text-red-900 dark:text-red-200">
               Participação registrada como NO-GO
             </p>
 
-            <p className="mt-1 text-xs leading-5 text-red-800">
-              A decisão foi salva para este edital. Você poderá
-              alterá-la posteriormente caso necessário.
+            <p className="mt-1 text-xs leading-5 text-red-800 dark:text-red-300">
+              A decisão foi salva para este edital. Você poderá alterá-la
+              posteriormente caso necessário.
             </p>
           </div>
         )}
@@ -667,7 +656,7 @@ export default function GoNoGo({
         <p
           role="status"
           aria-live="polite"
-          className="text-sm font-medium text-emerald-600"
+          className="text-sm font-medium text-emerald-600 dark:text-emerald-400"
         >
           ✓ {savedMessage}
         </p>
@@ -676,7 +665,7 @@ export default function GoNoGo({
       {err && (
         <div
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 p-3 text-sm text-red-700 dark:text-red-300"
         >
           <strong>Não foi possível salvar:</strong> {err}
         </div>

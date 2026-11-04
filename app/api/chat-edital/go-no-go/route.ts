@@ -1,107 +1,220 @@
+
 import { NextResponse } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import {
+  createServerClient,
+  type CookieOptions,
+} from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getTenantId } from "@/lib/tenant";
 
 export async function POST(req: Request) {
   try {
+    // 1. Configurar o Supabase com a sessão do usuário.
     const cookieStore = await cookies();
+
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) { return cookieStore.get(name)?.value; },
-          set(name: string, value: string, options: CookieOptions) {
-            try { cookieStore.set({ name, value, ...options }); } catch {}
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(
+            name: string,
+            value: string,
+            options: CookieOptions
+          ) {
+            try {
+              cookieStore.set({ name, value, ...options });
+            } catch {
+              // Cookies podem ser somente leitura neste contexto.
+            }
           },
           remove(name: string, options: CookieOptions) {
-            try { cookieStore.set({ name, value: "", ...options }); } catch {}
+            try {
+              cookieStore.set({
+                name,
+                value: "",
+                ...options,
+                maxAge: 0,
+              });
+            } catch {
+              // A atualização de cookies pode não estar disponível.
+            }
           },
         },
       }
     );
 
-    const body = await req.json();
-    const { editalId } = body;
+    // 2. Validar a autenticação.
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Sessão inválida ou expirada.",
+        },
+        { status: 401 }
+      );
+    }
+
+    // 3. Identificar a empresa da sessão autenticada.
+    const tenantId = await getTenantId(supabase);
+
+    if (!tenantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Sua conta não está associada a nenhuma empresa.",
+        },
+        { status: 403 }
+      );
+    }
+
+    // 4. Validar o corpo da requisição.
+    let body: { editalId?: unknown };
+
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Corpo da requisição inválido.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const editalId =
+      typeof body.editalId === "string"
+        ? body.editalId.trim()
+        : "";
 
     if (!editalId) {
-      return NextResponse.json({ error: "ID do edital não fornecido." }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "ID do edital não fornecido.",
+        },
+        { status: 400 }
+      );
     }
 
-    const tenantId = await getTenantId(supabase);
-    if (!tenantId) {
-      return NextResponse.json({ error: "Conta não associada a nenhuma empresa." }, { status: 400 });
+    // 5. Confirmar que o edital pertence à empresa atual.
+    const {
+      data: edital,
+      error: editalError,
+    } = await supabase
+      .from("bids")
+      .select("id, title, description, tenant_id")
+      .eq("id", editalId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    if (editalError) {
+      console.error(
+        "Erro ao consultar edital:",
+        editalError.message
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Não foi possível consultar o edital.",
+        },
+        { status: 500 }
+      );
     }
 
-    // 1. Verificar se já existem requisitos extraídos para este edital
-    const { data: existente } = await supabase
+    if (!edital) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Edital não encontrado ou sem acesso pela empresa atual.",
+        },
+        { status: 404 }
+      );
+    }
+
+    // 6. Buscar somente os requisitos deste edital e empresa.
+    const {
+      data: requisitosExistentes,
+      error: requisitosError,
+    } = await supabase
       .from("edital_requisitos")
       .select("*")
-      .eq("edital_id", editalId);
+      .eq("edital_id", editalId)
+      .eq("tenant_id", tenantId);
 
-    if (existente && existente.length > 0) {
+    if (requisitosError) {
+      console.error(
+        "Erro ao consultar requisitos:",
+        requisitosError.message
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Não foi possível consultar os requisitos do edital.",
+        },
+        { status: 500 }
+      );
+    }
+
+    // 7. Não confundir requisitos cadastrados com requisitos validados.
+    if (
+      requisitosExistentes &&
+      requisitosExistentes.length > 0
+    ) {
       return NextResponse.json({
         success: true,
-        requisitos: existente,
+        origem: "requisitos_existentes",
+        analise_documental_executada: false,
+        decisao_go_no_go_disponivel: false,
+        mensagem:
+          "Existem requisitos registrados, mas eles precisam ser conferidos contra o edital original e seus anexos antes da decisão.",
+        requisitos: requisitosExistentes,
       });
     }
 
-    // 2. Buscar o edital para obter o contexto e título
-    const { data: editalData } = await supabase
-      .from("bids")
-      .select("title, description")
-      .eq("id", editalId)
-      .single();
+    // 8. Sem requisitos documentais, não gerar decisão automática.
+    const possuiTitulo =
+      typeof edital.title === "string" &&
+      edital.title.trim().length > 0;
 
-    // 3. Gerar requisitos padrão estruturados com base na análise inteligente do edital
-    const requisitosPadrao = [
+    return NextResponse.json(
       {
-        categoria: "Habilitação Jurídica",
-        descricao: "Apresentação de Ato Constitutivo, Estatuto ou Contrato Social consolidado em vigor.",
-        atendido: true,
+        success: false,
+        analise_documental_executada: false,
+        decisao_go_no_go_disponivel: false,
+        requires_document_analysis: true,
+        editalId: edital.id,
+        mensagem: possuiTitulo
+          ? "O edital foi localizado, mas ainda não existem requisitos extraídos e registrados. Execute a análise do documento original e de seus anexos antes de avaliar o Go/No-Go."
+          : "O edital não possui título preenchido nem requisitos extraídos. Complete os dados e execute a análise documental antes de avaliar o Go/No-Go.",
+        error:
+          "Não é seguro gerar uma decisão Go/No-Go sem requisitos documentais verificados.",
       },
+      { status: 422 }
+    );
+  } catch (error: unknown) {
+    console.error("Erro na rota Go/No-Go:", error);
+
+    return NextResponse.json(
       {
-        categoria: "Regularidade Fiscal e Trabalhista",
-        descricao: "Prova de inscrição no CNPJ, CND Federal, Estadual/Municipal e Certidão Negativa de Débitos Trabalhistas (CNDT).",
-        atendido: true,
+        success: false,
+        error:
+          "Ocorreu um erro interno ao processar a análise.",
       },
-      {
-        categoria: "Qualificação Técnica",
-        descricao: "Comprovação de aptidão para desempenho de atividade pertinente através de atestados de capacidade técnica.",
-        atendido: false,
-      },
-      {
-        categoria: "Qualificação Econômico-Financeira",
-        descricao: "Balanço patrimonial e demonstrações contábeis do último exercício social com índices de liquidez adequados.",
-        atendido: true,
-      },
-    ];
-
-    // 4. Inserir os requisitos gerados na base de dados
-    const toInsert = requisitosPadrao.map((req) => ({
-      edital_id: editalId,
-      tenant_id: tenantId,
-      categoria: req.categoria,
-      descricao: req.descricao,
-      atendido: req.atendido,
-    }));
-
-    const { data: novosRequisitos, error: insertError } = await supabase
-      .from("edital_requisitos")
-      .insert(toInsert)
-      .select("*");
-
-    if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      requisitos: novosRequisitos,
-    });
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+      { status: 500 }
+    );
   }
 }
