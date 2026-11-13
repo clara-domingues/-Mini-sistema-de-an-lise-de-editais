@@ -136,10 +136,10 @@ async function main() {
 
   if (!aplicar) { console.log("\nSimulação. Nada foi gravado. Rode com --apply para gravar."); return; }
 
- const sb = createClient(
-    "https://jauyhikogisucwycfwor.supabase.co", 
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphdXloaWtvZ2lzdWN3eWNmd29yIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MTQ2NjEzOSwiZXhwIjoyMTA3MDQyMTM5fQ.cDRxKbMclZ7ZJa3N47D7xfuYOKg_OYT99_FRCyv5c7w"
-  );
+ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!url || !key) throw new Error("Defina NEXT_PUBLIC_SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY no .env.local");
+const sb = createClient(url, key);
  const itens = [...grupos.entries()].map(([k, g]) => ({
   tenant_id: tenant,
   tipo: g.tipo,

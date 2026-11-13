@@ -21,14 +21,13 @@ type Client = {
 type Bid = {
   id: string;
   title: string;
+  description?: string | null;
   client_id: string;
   status: string;
   estimated_value: number;
   deadline: string;
   clients?: Client;
 };
-
-
 
 function normalizeStatus(raw: string | null | undefined): string {
   const id = (raw || "")
@@ -54,11 +53,12 @@ export default function EditaisKanbanPage() {
   // Modal de Criação
   const [modalOpen, setModalOpen] = useState(false);
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [clientId, setClientId] = useState("");
   const [status, setStatus] = useState("a_fazer");
   const [estimatedValue, setEstimatedValue] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [pdfFiles, setPdfFiles] = useState<File[]>([]); // Alterado para array de múltiplos ficheiros
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
   const [formLoading, setFormLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -66,6 +66,7 @@ export default function EditaisKanbanPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingBid, setEditingBid] = useState<Bid | null>(null);
   const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [editClientId, setEditClientId] = useState("");
   const [editStatus, setEditStatus] = useState("a_fazer");
   const [editEstimatedValue, setEditEstimatedValue] = useState("");
@@ -210,7 +211,6 @@ export default function EditaisKanbanPage() {
 
       let fileUrl = null;
 
-      // Se houver ficheiros selecionados, envia o primeiro (ou faz o loop de múltiplos conforme necessidade do storage)
       if (pdfFiles.length > 0) {
         const file = pdfFiles[0];
         const fileExt = file.name.split(".").pop();
@@ -229,6 +229,7 @@ export default function EditaisKanbanPage() {
       const { error } = await supabase.from("bids").insert([
         {
           title: title.trim(),
+          description: description.trim() || null,
           client_id: clientId,
           status,
           estimated_value: estimatedValue ? parseFloat(estimatedValue) : 0,
@@ -243,6 +244,7 @@ export default function EditaisKanbanPage() {
       }
 
       setTitle("");
+      setDescription("");
       setClientId("");
       setStatus("a_fazer");
       setEstimatedValue("");
@@ -264,6 +266,7 @@ export default function EditaisKanbanPage() {
     e.stopPropagation();
     setEditingBid(bid);
     setEditTitle(bid.title || "");
+    setEditDescription(bid.description || "");
     setEditClientId(bid.client_id || "");
     setEditStatus(normalizeStatus(bid.status));
     setEditEstimatedValue(bid.estimated_value ? String(bid.estimated_value) : "");
@@ -287,6 +290,7 @@ export default function EditaisKanbanPage() {
         .from("bids")
         .update({
           title: editTitle.trim(),
+          description: editDescription.trim() || null,
           client_id: editClientId,
           status: editStatus,
           estimated_value: editEstimatedValue ? parseFloat(editEstimatedValue) : 0,
@@ -343,6 +347,7 @@ export default function EditaisKanbanPage() {
   const editaisFiltrados = bids.filter((bid) => {
     const atendeBusca =
       bid.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (bid.description && bid.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (bid.clients?.name && bid.clients.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const atendeStatus = statusFilter === "TODOS" || normalizeStatus(bid.status) === statusFilter;
@@ -359,7 +364,7 @@ export default function EditaisKanbanPage() {
   return (
     <div className="flex min-h-screen w-full bg-slate-100 dark:bg-slate-950 transition-colors">
       <Nav />
-      <main className="flex-1 w-full overflow-hidden px-4 py-6 text-slate-900 dark:text-slate-100 sm:px-6 lg:px-10">
+      <main className="flex-1 min-w-0 w-full overflow-hidden px-4 py-6 text-slate-900 dark:text-slate-100 sm:px-6 lg:px-10">
         <div className="flex h-full min-h-0 w-full flex-col space-y-6">
           <header className="flex shrink-0 flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
@@ -389,7 +394,7 @@ export default function EditaisKanbanPage() {
             <div className="w-full sm:w-80">
               <input
                 type="text"
-                placeholder="🔍 Buscar por edital ou órgão..."
+                placeholder="🔍 Buscar por edital, descrição ou órgão..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white placeholder-slate-400"
@@ -404,7 +409,7 @@ export default function EditaisKanbanPage() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="TODOS">Todas as Colunas ({bids.length})</option>
+                <option value="TODOS">Todos os editais ({bids.length})</option>
                 {COLUMNS.map((col) => (
                   <option key={col.id} value={col.id}>
                     {col.label}
@@ -419,25 +424,30 @@ export default function EditaisKanbanPage() {
               Carregando Kanban...
             </div>
           ) : (
-            <div className="flex flex-1 gap-4 overflow-x-auto pb-6 min-w-0">
+            <div className="flex flex-1 items-stretch gap-4 overflow-x-auto pb-6 min-w-0 h-[calc(100vh-320px)] min-h-[420px]">
               {COLUMNS.map((col) => {
                 const columnBids = editaisFiltrados.filter((b) => normalizeStatus(b.status) === col.id);
                 return (
                   <div
                     key={col.id}
-                    className="flex w-72 shrink-0 flex-col rounded-2xl bg-slate-200/70 dark:bg-slate-800/80 p-4 border border-slate-300/60 dark:border-slate-700 max-h-[calc(100vh-280px)] overflow-hidden shadow-sm transition-colors"
+                    className="flex h-full w-80 min-w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-300/60 bg-slate-200/70 p-4 shadow-sm transition-colors dark:border-slate-700 dark:bg-slate-800/80"
                   >
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-300 dark:border-slate-700">
-                      <div className="flex items-center gap-2">
-                        <span className={`h-3 w-3 rounded-full ${col.color}`} />
-                        <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200">{col.label}</h3>
+                    <div className="flex shrink-0 items-center justify-between pb-3 border-b border-slate-300 dark:border-slate-700">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-full"
+                          style={{ backgroundColor: col.color }}
+                        />
+                        <h3 className="truncate font-bold text-sm text-slate-800 dark:text-slate-200">
+                          {col.label}
+                        </h3>
                       </div>
-                      <span className="rounded-full bg-slate-300/80 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      <span className="ml-2 shrink-0 rounded-full bg-slate-300/80 dark:bg-slate-700 px-2.5 py-0.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
                         {columnBids.length}
                       </span>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto space-y-3 mt-3 pr-1">
+                    <div className="mt-3 flex-1 min-h-0 space-y-3 overflow-y-auto pr-1">
                       {columnBids.length === 0 ? (
                         <div className="flex h-24 items-center justify-center rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-xs text-slate-400">
                           Sem editais
@@ -449,8 +459,8 @@ export default function EditaisKanbanPage() {
                             href={`/editais/${bid.id}`}
                             className="group relative flex flex-col rounded-xl bg-white dark:bg-slate-900 p-4 shadow-sm border border-slate-200 dark:border-slate-800 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition cursor-pointer"
                           >
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide truncate max-w-[170px]">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="min-w-0 flex-1 truncate text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
                                 {bid.clients?.name || "Cliente não informado"}
                               </span>
 
@@ -458,7 +468,7 @@ export default function EditaisKanbanPage() {
                                 type="button"
                                 title="Editar Edital"
                                 onClick={(e) => openEditModal(bid, e)}
-                                className="rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 transition z-10"
+                                className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-blue-600 transition z-10"
                               >
                                 ✏️
                               </button>
@@ -468,18 +478,24 @@ export default function EditaisKanbanPage() {
                               {bid.title}
                             </h4>
 
-                            <div className="mt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 pt-3 text-xs text-slate-500 dark:text-slate-400">
-                              <span>{formatBRL(bid.estimated_value)}</span>
+                            {bid.description && (
+                              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+                                {bid.description}
+                              </p>
+                            )}
+
+                            <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800 pt-3 text-xs text-slate-500 dark:text-slate-400">
+                              <span className="min-w-0 truncate">{formatBRL(bid.estimated_value)}</span>
                               {bid.deadline ? (
-                                <span className="font-medium text-slate-600 dark:text-slate-300">
+                                <span className="shrink-0 font-medium text-slate-600 dark:text-slate-300">
                                   📅 {new Date(bid.deadline).toLocaleDateString("pt-BR")}
                                 </span>
                               ) : (
-                                <span className="text-[11px] text-slate-400">Data a definir</span>
+                                <span className="shrink-0 text-[11px] text-slate-400">Data a definir</span>
                               )}
                             </div>
 
-                            <div className="mt-3 flex items-center justify-between pt-2">
+                            <div className="mt-3 flex items-center gap-2 pt-2">
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -488,7 +504,7 @@ export default function EditaisKanbanPage() {
                                   setSelectedBid(bid);
                                   setChatOpen(true);
                                 }}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 transition z-10"
+                                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 px-3 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 transition z-10"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -507,7 +523,7 @@ export default function EditaisKanbanPage() {
                                   e.stopPropagation();
                                   void updateBidStatus(bid.id, e.target.value);
                                 }}
-                                className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300 outline-none focus:border-blue-600 z-10 cursor-pointer"
+                                className="min-w-0 flex-1 truncate rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-1.5 text-[11px] font-medium text-slate-700 dark:text-slate-300 outline-none focus:border-blue-600 z-10 cursor-pointer"
                               >
                                 {COLUMNS.map((c) => (
                                   <option key={c.id} value={c.id}>
@@ -558,6 +574,19 @@ export default function EditaisKanbanPage() {
               </div>
 
               <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Especificação / Palavras-chave do Objeto
+                </label>
+                <textarea
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Descreva o objeto ou palavras-chave (Ex: Fornecimento de EPIs, luvas amarelas de látex, serviços de limpeza...)"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Cliente / Órgão *
@@ -594,7 +623,7 @@ export default function EditaisKanbanPage() {
                       placeholder="Nome do novo órgão ou cliente..."
                       value={newClientName}
                       onChange={(e) => setNewClientName(e.target.value)}
-                      className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                      className="min-w-0 flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-slate-100 placeholder-slate-400"
                     />
                     <button
                       type="button"
@@ -646,7 +675,6 @@ export default function EditaisKanbanPage() {
                 </div>
               </div>
 
-              {/* Upload Múltiplo de Documentos */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Documentos / Ficheiros do Edital (PDF/Outros)
@@ -678,16 +706,15 @@ export default function EditaisKanbanPage() {
                   </span>
                 </div>
 
-                {/* Lista de ficheiros selecionados com opção de remoção */}
                 {pdfFiles.length > 0 && (
                   <ul className="mt-2 max-h-28 overflow-y-auto space-y-1 text-xs text-slate-700 dark:text-slate-300">
                     {pdfFiles.map((file, index) => (
                       <li key={index} className="flex items-center justify-between rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-1.5 border border-slate-200 dark:border-slate-700">
-                        <span className="truncate max-w-[280px]">{file.name}</span>
+                        <span className="min-w-0 flex-1 truncate">{file.name}</span>
                         <button
                           type="button"
                           onClick={() => setPdfFiles(pdfFiles.filter((_, i) => i !== index))}
-                          className="text-red-500 hover:text-red-700 font-bold ml-2"
+                          className="ml-2 shrink-0 text-red-500 hover:text-red-700 font-bold"
                         >
                           ✕
                         </button>
@@ -759,7 +786,20 @@ export default function EditaisKanbanPage() {
                   required
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm outline-none focus:border-blue-600 text-slate-900 dark:text-slate-100"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Especificação / Palavras-chave do Objeto
+                </label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Descreva o objeto ou palavras-chave para orientar a IA..."
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-blue-600"
                 />
               </div>
 
@@ -847,7 +887,7 @@ export default function EditaisKanbanPage() {
         </div>
       )}
 
-      {/* Modal de Chat IA / Análise */}
+      {/* Modal de Chat IA */}
       {chatOpen && selectedBid && (
         <ChatEditalModal
           isOpen={chatOpen}
@@ -855,7 +895,6 @@ export default function EditaisKanbanPage() {
             setChatOpen(false);
             setSelectedBid(null);
           }}
-        
           editalTitle={selectedBid.title}
         />
       )}
